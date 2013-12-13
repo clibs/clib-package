@@ -189,32 +189,22 @@ clib_package_t *
 clib_package_new_from_slug(const char *_slug) {
   if (!_slug) return NULL;
 
-  // sanatize `_slug`
+  // sanitize `_slug`
 
   char *author = clib_package_parse_author(_slug);
   if (!author) return NULL;
 
   char *name = clib_package_parse_name(_slug);
-  if (!name) {
-    free(author);
-    return NULL;
-  }
+  if (!name) return NULL;
 
   char *version = clib_package_parse_version(_slug);
-  if (!version) {
-    free(author);
-    return NULL;
-  }
+  if (!version) return NULL;
 
   char *url = clib_package_url(author, name, version);
-  if (!url) {
-    free(author);
-    return NULL;
-  }
+  if (!url) return NULL;
 
   char *json_url = clib_package_file_url(url, "package.json");
   if (!json_url) {
-    free(author);
     free(url);
     return NULL;
   }
