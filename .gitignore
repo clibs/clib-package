@@ -1,4 +1,7 @@
+test/fixtures
+test/package-dependency-new
 test/package-install
+test/package-install-dependencies
 test/package-new
 test/package-new-from-slug
 test/package-parse-author
