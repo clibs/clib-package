@@ -8,3 +8,4 @@ test/package-parse-author
 test/package-parse-name
 test/package-parse-version
 test/package-url
+example
