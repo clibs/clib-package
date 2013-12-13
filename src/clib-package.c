@@ -125,12 +125,18 @@ clib_package_new(const char *json) {
   pkg->json = json;
   pkg->name = json_object_get_string_safe(json_object, "name");
 
+  pkg->repo = NULL;
   pkg->repo = json_object_get_string_safe(json_object, "repo");
-  // TODO how do we do this if there's no repo set?
-  pkg->author = clib_package_parse_author(pkg->repo);
-  // TODO hack.  yuck.
-  pkg->repo_name = clib_package_parse_name(pkg->repo);
-  // TODO support npm-style "repository"?
+  if (NULL != pkg->repo) {
+    // TODO how do we do this if there's no repo set?
+    pkg->author = clib_package_parse_author(pkg->repo);
+    // TODO hack.  yuck.
+    pkg->repo_name = clib_package_parse_name(pkg->repo);
+    // TODO support npm-style "repository"?
+  } else {
+    pkg->author = NULL;
+    pkg->repo_name = NULL;
+  }
 
   pkg->version = json_object_get_string_safe(json_object, "version");
   pkg->license = json_object_get_string_safe(json_object, "license");
@@ -177,7 +183,6 @@ clib_package_new(const char *json) {
   }
 
   json_value_free(root);
-
   return pkg;
 }
 
@@ -218,13 +223,18 @@ clib_package_new_from_slug(const char *_slug) {
 
   clib_package_t *pkg = clib_package_new(res->data);
   if (pkg) {
-    // we may install foo/bar@master which has the
-    // version x.y.z specified in its package.json
-    if (0 != strcmp(version, pkg->version)) {
+
+    // force version
+    if (NULL == pkg->version || 0 != strcmp(version, pkg->version))
       pkg->version = version;
-    }
+
+    // force author
+    if (NULL == pkg->author || 0 == strcmp(author, pkg->author))
+      pkg->author = author;
+
+    // force repo
     char *repo = clib_package_repo(author, name);
-    if (0 != strcmp(repo, pkg->repo)) {
+    if (NULL == pkg->repo || 0 != strcmp(repo, pkg->repo)) {
       pkg->repo = repo;
     } else {
       free(repo);
@@ -377,58 +387,65 @@ clib_package_install(clib_package_t *pkg, const char *dir) {
   if (!pkg || !dir) return -1;
 
   char *pkg_dir = path_join(dir, pkg->name);
-  if (!pkg_dir) {
-    return -1;
-  }
-
-  char *base_url = clib_package_url(pkg->author, pkg->repo_name, pkg->version);
-  if (!base_url) {
-    free(pkg_dir);
+  if (NULL == pkg_dir) {
     return -1;
   }
 
   if (-1 == mkdirp(pkg_dir, 0777)) {
     free(pkg_dir);
-    free(base_url);
     return -1;
   }
 
-  // write package.json
-
-  char *package_json = path_join(pkg_dir, "package.json");
-  if (!package_json) return -1;
-  fs_write(package_json, pkg->json);
-  free(package_json);
-
-  // write each source
-
-  list_node_t *node;
-  list_iterator_t *it = list_iterator_new(pkg->src, LIST_HEAD);
-  while ((node = list_iterator_next(it))) {
-    char *filename = node->val;
-
-    // download source file
-
-    char *file_url = clib_package_file_url(base_url, filename);
-    char *file_path = path_join(pkg_dir, basename(filename));
-
-    if (!file_url || !file_path) {
-      if (file_url) free(file_url);
-      return -1;
-    }
-
-    int rc = http_get_file(file_url, file_path);
-    free(file_url);
-    free(file_path);
-    if (-1 == rc) {
-      return -1;
-    }
+  char *base_url = clib_package_url(pkg->author, pkg->repo_name, pkg->version);
+  if (NULL == base_url) {
+    free(pkg_dir);
+    return -1;
   }
 
-  list_iterator_destroy(it);
+  if (NULL != pkg->src) {
+    // write package.json
 
-  free(pkg_dir);
-  free(base_url);
+    char *package_json = path_join(pkg_dir, "package.json");
+    if (NULL == package_json) {
+      free(pkg_dir);
+      free(base_url);
+      return -1;
+    }
+
+    fs_write(package_json, pkg->json);
+    free(package_json);
+
+    // write each source
+
+    list_node_t *node;
+    list_iterator_t *it = list_iterator_new(pkg->src, LIST_HEAD);
+    while ((node = list_iterator_next(it))) {
+      char *filename = node->val;
+
+      // download source file
+
+      char *file_url = clib_package_file_url(base_url, filename);
+      char *file_path = path_join(pkg_dir, basename(filename));
+
+      if (NULL == file_url || NULL == file_path) {
+        if (file_url) free(file_url);
+        free(pkg_dir);
+        free(base_url);
+        return -1;
+      }
+
+      int rc = http_get_file(file_url, file_path);
+      free(file_url);
+      free(file_path);
+      if (-1 == rc) {
+        free(pkg_dir);
+        free(base_url);
+        return -1;
+      }
+    }
+
+    list_iterator_destroy(it);
+  }
 
   return clib_package_install_dependencies(pkg, dir);
 }
