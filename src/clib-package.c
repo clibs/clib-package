@@ -222,9 +222,7 @@ clib_package_new_from_slug(const char *_slug) {
     // TODO rename response_t to http_get_response_t
   response_t *res = http_get(json_url);
   if (!res || !res->ok) {
-    free(author);
     free(url);
-    // if (res) free(res);
     return NULL;
   }
 

@@ -11,6 +11,10 @@ describe("clib_package_new_from_slug", {
     assert(NULL == clib_package_new_from_slug("author/@version"));
   });
 
+  it("should return NULL when given slug which doesn't resolve", {
+    assert(NULL == clib_package_new_from_slug("abc11234"));
+  });
+
   it("should build the correct package", {
     clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/case.c@0.1.0");
     assert_str_equal("case", pkg->name);
