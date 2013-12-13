@@ -1,0 +1,7 @@
+test/package-install
+test/package-new
+test/package-new-from-slug
+test/package-parse-author
+test/package-parse-name
+test/package-parse-version
+test/package-url

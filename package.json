@@ -1,0 +1,17 @@
+{
+  "name": "clib-package",
+  "version": "0.0.0",
+  "src": [
+    "src/clib-package.h",
+    "src/clib-package.c"
+  ],
+  "dependencies": {
+    "list": "*",
+    "kgabis/parson": "*",
+    "stephenmathieson/substr.c": "*",
+    "stephenmathieson/http-get.c": "*",
+    "stephenmathieson/mkdirp.c": "*",
+    "jwerle/fs.c": "*",
+    "stephenmathieson/path-join.c": "*"
+  }
+}
