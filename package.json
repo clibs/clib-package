@@ -14,5 +14,8 @@
     "stephenmathieson/mkdirp.c": "*",
     "jwerle/fs.c": "*",
     "stephenmathieson/path-join.c": "*"
+  },
+  "development": {
+    "stephenmathieson/describe.h": "1.0.0"
   }
 }
