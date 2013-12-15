@@ -51,6 +51,18 @@ describe("clib_package_install", {
     rimraf("./test/fixtures");
   });
 
+  it("should install the package's development dependencies", {
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/trim.c@0.0.2", 0);
+    assert(pkg);
+    assert(0 == clib_package_install(pkg, "./test/fixtures/", 0));
+    assert(0 == fs_exists("./test/fixtures/describe/"));
+    assert(0 == fs_exists("./test/fixtures/describe/package.json"));
+    assert(0 == fs_exists("./test/fixtures/describe/describe.h"));
+    assert(0 == fs_exists("./test/fixtures/describe/assertion-macros.h"));
+    clib_package_free(pkg);
+    rimraf("./test/fixtures");
+  });
+
   it("should install itself", {
     clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/clib-package", 0);
     assert(pkg);
@@ -101,6 +113,11 @@ describe("clib_package_install", {
     assert(0 == fs_exists("./test/fixtures/str-starts-with/package.json"));
     assert(0 == fs_exists("./test/fixtures/str-starts-with/str-starts-with.c"));
     assert(0 == fs_exists("./test/fixtures/str-starts-with/str-starts-with.h"));
+
+    assert(0 == fs_exists("./test/fixtures/describe"));
+    assert(0 == fs_exists("./test/fixtures/describe/package.json"));
+    assert(0 == fs_exists("./test/fixtures/describe/assertion-macros.h"));
+    assert(0 == fs_exists("./test/fixtures/describe/describe.h"));
 
     clib_package_free(pkg);
     rimraf("./test/fixtures");
