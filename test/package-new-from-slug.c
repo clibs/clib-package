@@ -5,19 +5,19 @@
 
 describe("clib_package_new_from_slug", {
   it("should return NULL when given a bad slug", {
-    assert(NULL == clib_package_new_from_slug(NULL));
+    assert(NULL == clib_package_new_from_slug(NULL, 0));
   });
 
   it("should return NULL when given a slug missing a name", {
-    assert(NULL == clib_package_new_from_slug("author/@version"));
+    assert(NULL == clib_package_new_from_slug("author/@version", 0));
   });
 
   it("should return NULL when given slug which doesn't resolve", {
-    assert(NULL == clib_package_new_from_slug("abc11234"));
+    assert(NULL == clib_package_new_from_slug("abc11234", 0));
   });
 
   it("should build the correct package", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/case.c@0.1.0");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/case.c@0.1.0", 0);
     assert(pkg);
     assert_str_equal("case", pkg->name);
     assert_str_equal("0.1.0", pkg->version);
@@ -28,14 +28,14 @@ describe("clib_package_new_from_slug", {
   });
 
   it("should force package version numbers", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c", 0);
     assert(pkg);
     assert_str_equal("master", pkg->version);
     clib_package_free(pkg);
   });
 
   it("should save the package's json", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/str-replace.c@8ca90fb");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/str-replace.c@8ca90fb", 0);
     assert(pkg);
     assert(pkg->json);
 

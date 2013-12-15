@@ -22,15 +22,15 @@ describe("clib_package_new", {
     "}";
 
   it("should return NULL when given broken json", {
-    assert(NULL == clib_package_new("{"));
+    assert(NULL == clib_package_new("{", 0));
   });
 
   it("should return NULL when given a bad string", {
-    assert(NULL == clib_package_new(NULL));
+    assert(NULL == clib_package_new(NULL, 0));
   });
 
   it("should return a clib_package when given valid json", {
-    clib_package_t *pkg = clib_package_new(json);
+    clib_package_t *pkg = clib_package_new(json, 0);
     assert(pkg);
 
     assert_str_equal(json, pkg->json);

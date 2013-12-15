@@ -30,10 +30,10 @@ typedef struct {
 } clib_package_t;
 
 clib_package_t *
-clib_package_new(const char *);
+clib_package_new(const char *, int);
 
 clib_package_t *
-clib_package_new_from_slug(const char *);
+clib_package_new_from_slug(const char *, int);
 
 char *
 clib_package_url(const char *, const char *, const char *);
@@ -51,10 +51,10 @@ clib_package_dependency_t *
 clib_package_dependency_new(const char *, const char *);
 
 int
-clib_package_install(clib_package_t *, const char *);
+clib_package_install(clib_package_t *, const char *, int);
 
 int
-clib_package_install_dependencies(clib_package_t *, const char *);
+clib_package_install_dependencies(clib_package_t *, const char *, int);
 
 void
 clib_package_free(clib_package_t *);

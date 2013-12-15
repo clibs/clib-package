@@ -13,11 +13,11 @@
 
 All functions accepting a `char *slug` parameter expect the format `<author>/<name>@<version>`, where `author` and `version` are optional.
 
-### `clib_package_t *clib_package_new(const char *json)`
+### `clib_package_t *clib_package_new(const char *json, int verbose)`
 
   Initialize a new package from the given `json`.
 
-### `clib_package_t *clib_package_new_from_slug(const char *slug)`
+### `clib_package_t *clib_package_new_from_slug(const char *slug, int verbose)`
 
   Initialize a new package from the given GitHub repository `slug`.
 
@@ -41,13 +41,13 @@ All functions accepting a `char *slug` parameter expect the format `<author>/<na
 
   Create a dependency of the package described as `<repo>@<version>`.
 
-### `int clib_package_install(clib_package_t *pkg, const char *dir)`
+### `int clib_package_install(clib_package_t *pkg, const char *dir, int verbose)`
 
   Install the given `pkg` and all of its dependencies in `dir/<package name>`.  Will create `dir` if it does not exist.
 
   Returns `0` on success.
 
-### `int clib_package_install_dependencies(clib_package_t *pkg, const char *dir)`
+### `int clib_package_install_dependencies(clib_package_t *pkg, const char *dir, int verbose)`
 
   Install all dependencies of the given `pkg` in `dir/<dependency name>`.  Will create `dir` if it does not exist.
 
@@ -65,18 +65,20 @@ Simple CLI for installing clib packages:
 #include <stdio.h>
 #include "clib-package.h"
 
+#define true 1
+
 int main(int argc, char const *argv[]) {
   for (int i = 1; i < argc; ++i) {
-    clib_package_t *pkg = clib_package_new_from_slug(argv[i]);
+    clib_package_t *pkg = clib_package_new_from_slug(argv[i], 1);
     if (!pkg) return 1;
-    printf("installing %s\n", pkg->name);
-    int rc = clib_package_install(pkg, "./deps");
+    int rc = clib_package_install(pkg, "./deps", true);
     clib_package_free(pkg);
     if (0 != rc) return 2;
   }
 
   return 0;
 }
+
 ```
 
 For more, see [the tests](https://github.com/stephenmathieson/clib-package/tree/master/test).

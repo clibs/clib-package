@@ -7,13 +7,13 @@
 
 describe("clib_package_install_dependencies", {
   it("should return -1 when given a bad package", {
-    assert(-1 == clib_package_install_dependencies(NULL, "./deps"));
+    assert(-1 == clib_package_install_dependencies(NULL, "./deps", 0));
   });
 
   it("should install the dep in its own directory", {
-    clib_package_t *dep = clib_package_new_from_slug("stephenmathieson/mkdirp.c");
+    clib_package_t *dep = clib_package_new_from_slug("stephenmathieson/mkdirp.c", 0);
     assert(dep);
-    assert(0 == clib_package_install_dependencies(dep, "./test/fixtures/"));
+    assert(0 == clib_package_install_dependencies(dep, "./test/fixtures/", 0));
     assert(0 == fs_exists("./test/fixtures/"));
     assert(0 == fs_exists("./test/fixtures/path-normalize"));
     clib_package_free(dep);
@@ -21,18 +21,18 @@ describe("clib_package_install_dependencies", {
   });
 
   it("should install the dependency's package.json", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c", 0);
     assert(pkg);
-    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/"));
+    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/", 0));
     assert(0 == fs_exists("./test/fixtures/path-normalize/package.json"));
     clib_package_free(pkg);
     rimraf("./test/fixtures/");
   });
 
   it("should install the dependency's sources", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c", 0);
     assert(pkg);
-    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/"));
+    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/", 0));
     assert(0 == fs_exists("./test/fixtures/path-normalize/path-normalize.c"));
     assert(0 == fs_exists("./test/fixtures/path-normalize/path-normalize.h"));
     clib_package_free(pkg);
@@ -40,9 +40,9 @@ describe("clib_package_install_dependencies", {
   });
 
   it("should install the dependency's dependencies", {
-    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/rimraf.c");
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/rimraf.c", 0);
     assert(pkg);
-    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/"));
+    assert(0 == clib_package_install_dependencies(pkg, "./test/fixtures/", 0));
     // deps
     assert(0 == fs_exists("./test/fixtures/path-join/"));
     assert(0 == fs_exists("./test/fixtures/path-join/package.json"));

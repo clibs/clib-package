@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <libgen.h>
+#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include "parson/parson.h"
@@ -60,6 +61,45 @@ clib_package_file_url(const char *url, const char *file) {
 }
 
 /**
+ * Debug/log functions
+ */
+
+static void
+clib_package_debug(const char *type, const char *msg, int color) {
+  printf("  \033[%dm%10s\033[0m : \033[90m%s\033[m\n", color, type, msg);
+}
+
+static void
+clib_package_log(const char *type, const char *msg, ...) {
+  char *buf = malloc(256);
+  va_list args;
+  va_start(args, msg);
+  vsprintf(buf, msg, args);
+  va_end(args);
+  clib_package_debug(type, msg, 36);
+}
+
+static void
+clib_package_error(const char *type, const char *msg, ...) {
+  char *buf = malloc(256);
+  va_list args;
+  va_start(args, msg);
+  vsprintf(buf, msg, args);
+  va_end(args);
+  clib_package_debug(type, buf, 31);
+}
+
+static void
+clib_package_warn(const char *type, const char *msg, ...) {
+  char *buf = malloc(256);
+  va_list args;
+  va_start(args, msg);
+  vsprintf(buf, msg, args);
+  va_end(args);
+  clib_package_debug(type, buf, 33);
+}
+
+/**
  * Build a slug
  */
 
@@ -71,7 +111,8 @@ clib_package_slug(const char *author, const char *name, const char *version) {
     + strlen(name)
     + 1 // @
     + strlen(version)
-    + 1; // \0
+    + 1 // \0
+    ;
 
   char *slug = malloc(size);
   sprintf(slug, "%s/%s@%s", author, name, version);
@@ -88,7 +129,8 @@ clib_package_repo(const char *author, const char *name) {
       strlen(author)
     + 1 // /
     + strlen(name)
-    + 1; // \0
+    + 1 // \0
+    ;
 
   char *repo = malloc(size);
   sprintf(repo, "%s/%s", author, name);
@@ -100,7 +142,7 @@ clib_package_repo(const char *author, const char *name) {
  */
 
 clib_package_t *
-clib_package_new(const char *json) {
+clib_package_new(const char *json, int verbose) {
   if (!json) return NULL;
 
   clib_package_t *pkg = malloc(sizeof(clib_package_t));
@@ -117,6 +159,7 @@ clib_package_new(const char *json) {
 
   JSON_Object *json_object = json_value_get_object(root);
   if (!json_object) {
+    if (verbose) clib_package_error("error", "unable to parse json");
     json_value_free(root);
     clib_package_free(pkg);
     return NULL;
@@ -134,6 +177,7 @@ clib_package_new(const char *json) {
     pkg->repo_name = clib_package_parse_name(pkg->repo);
     // TODO support npm-style "repository"?
   } else {
+    if (verbose) clib_package_warn("warning", "missing repo in package.json");
     pkg->author = NULL;
     pkg->repo_name = NULL;
   }
@@ -191,7 +235,7 @@ clib_package_new(const char *json) {
  */
 
 clib_package_t *
-clib_package_new_from_slug(const char *_slug) {
+clib_package_new_from_slug(const char *_slug, int verbose) {
   if (!_slug) return NULL;
 
   // sanitize `_slug`
@@ -214,14 +258,15 @@ clib_package_new_from_slug(const char *_slug) {
     return NULL;
   }
 
-    // TODO rename response_t to http_get_response_t
+  if (verbose) clib_package_log("fetch", json_url);
   http_get_response_t *res = http_get(json_url);
   if (!res || !res->ok) {
+    clib_package_error("error", "unable to fetch %s", json_url);
     free(url);
     return NULL;
   }
 
-  clib_package_t *pkg = clib_package_new(res->data);
+  clib_package_t *pkg = clib_package_new(res->data, verbose);
   if (pkg) {
 
     // force version
@@ -385,7 +430,7 @@ clib_package_dependency_new(const char *repo, const char *version) {
  */
 
 int
-clib_package_install(clib_package_t *pkg, const char *dir) {
+clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   if (!pkg || !dir) return -1;
 
   char *pkg_dir = path_join(dir, pkg->name);
@@ -436,10 +481,16 @@ clib_package_install(clib_package_t *pkg, const char *dir) {
         return -1;
       }
 
+      if (verbose) {
+        clib_package_log("fetch", file_url);
+        clib_package_log("save", file_path);
+      }
+
       int rc = http_get_file(file_url, file_path);
       free(file_url);
       free(file_path);
       if (-1 == rc) {
+        if (verbose) clib_package_error("error", "unable to fetch %s", file_url);
         free(pkg_dir);
         free(base_url);
         return -1;
@@ -449,7 +500,7 @@ clib_package_install(clib_package_t *pkg, const char *dir) {
     list_iterator_destroy(it);
   }
 
-  return clib_package_install_dependencies(pkg, dir);
+  return clib_package_install_dependencies(pkg, dir, verbose);
 }
 
 /**
@@ -457,7 +508,7 @@ clib_package_install(clib_package_t *pkg, const char *dir) {
  */
 
 int
-clib_package_install_dependencies(clib_package_t *pkg, const char *dir) {
+clib_package_install_dependencies(clib_package_t *pkg, const char *dir, int verbose) {
   if (!pkg || !dir) return -1;
   if (NULL == pkg->dependencies) return 0;
 
@@ -466,13 +517,13 @@ clib_package_install_dependencies(clib_package_t *pkg, const char *dir) {
   while ((node = list_iterator_next(it))) {
     clib_package_dependency_t *dep = node->val;
     char *slug = clib_package_slug(dep->author, dep->name, dep->version);
-    clib_package_t *pkg = clib_package_new_from_slug(slug);
+    clib_package_t *pkg = clib_package_new_from_slug(slug, verbose);
     free(slug);
     if (NULL == pkg) {
       return -1;
     }
 
-    clib_package_install(pkg, dir);
+    clib_package_install(pkg, dir, verbose);
   }
 
   list_iterator_destroy(it);
