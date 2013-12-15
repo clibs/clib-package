@@ -1,7 +1,7 @@
 
 CC     ?= cc
 SRC     = $(wildcard src/*.c)
-SRC    += $(wildcard deps/*.c)
+SRC    += $(wildcard deps/*/*.c)
 TESTS   = $(wildcard test/*.c)
 CFLAGS  = -std=c99 -Wall -Isrc -Ideps
 LDFLAGS = -lcurl

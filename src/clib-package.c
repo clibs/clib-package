@@ -3,12 +3,12 @@
 #include <libgen.h>
 #include <string.h>
 #include <stdio.h>
-#include "parson.h"
-#include "substr.h"
-#include "http-get.h"
-#include "mkdirp.h"
-#include "fs.h"
-#include "path-join.h"
+#include "parson/parson.h"
+#include "substr/substr.h"
+#include "http-get/http-get.h"
+#include "mkdirp/mkdirp.h"
+#include "fs/fs.h"
+#include "path-join/path-join.h"
 
 #include "clib-package.h"
 
@@ -122,7 +122,7 @@ clib_package_new(const char *json) {
     return NULL;
   }
 
-  pkg->json = json;
+  pkg->json = strdup(json);
   pkg->name = json_object_get_string_safe(json_object, "name");
 
   pkg->repo = NULL;
@@ -215,7 +215,7 @@ clib_package_new_from_slug(const char *_slug) {
   }
 
     // TODO rename response_t to http_get_response_t
-  response_t *res = http_get(json_url);
+  http_get_response_t *res = http_get(json_url);
   if (!res || !res->ok) {
     free(url);
     return NULL;
@@ -240,6 +240,8 @@ clib_package_new_from_slug(const char *_slug) {
       free(repo);
     }
   }
+
+  http_get_free(res);
 
   return pkg;
 }

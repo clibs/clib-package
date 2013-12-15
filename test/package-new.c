@@ -1,7 +1,6 @@
 
-#include "describe.h"
+#include "describe/describe.h"
 #include "clib-package.h"
-
 
 describe("clib_package_new", {
   char json[] =

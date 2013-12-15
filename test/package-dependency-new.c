@@ -1,6 +1,7 @@
 
-#include "describe.h"
+#include "describe/describe.h"
 #include "clib-package.h"
+
 
 describe("clib_package_dependency_new", {
   it("should return NULL when given bad input", {

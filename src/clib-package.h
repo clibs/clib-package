@@ -2,7 +2,7 @@
 #ifndef CLIB_PACKAGE_H
 #define CLIB_PACKAGE_H 1
 
-#include "list.h"
+#include "list/list.h"
 
 #define CLIB_PACKAGE_DEFAULT_AUTHOR  "clibs"
 #define CLIB_PACKAGE_DEFAULT_VERSION "master"

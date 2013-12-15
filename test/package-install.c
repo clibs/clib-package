@@ -1,7 +1,7 @@
 
-#include "describe.h"
-#include "rimraf.h"
-#include "fs.h"
+#include "describe/describe.h"
+#include "rimraf/rimraf.h"
+#include "fs/fs.h"
 #include "clib-package.h"
 
 

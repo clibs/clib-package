@@ -8,7 +8,7 @@
 
 #include <errno.h>
 #include <string.h>
-#include "path-normalize.h"
+#include "path-normalize/path-normalize.h"
 #include "mkdirp.h"
 
 /*

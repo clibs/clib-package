@@ -1,0 +1,20 @@
+{
+  "name": "mkdirp",
+  "version": "0.0.1",
+  "repo": "stephenmathieson/mkdirp.c",
+  "description": "mkdir -p",
+  "keywords": [
+    "mkdir",
+    "mkdirp"
+  ],
+  "license": "MIT",
+  "src": [
+    "src/mkdirp.c",
+    "src/mkdirp.h",
+    "deps/path-normalize.c",
+    "deps/path-normalize.h"
+  ],
+  "dependencies": {
+    "stephenmathieson/path-normalize.c": "master"
+  }
+}

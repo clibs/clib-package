@@ -1,7 +1,8 @@
 
 #include <string.h>
-#include "describe.h"
+#include "describe/describe.h"
 #include "clib-package.h"
+
 
 describe("clib_package_parse_author", {
   it("should return NULL when given a bad slug", {

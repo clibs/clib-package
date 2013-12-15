@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "rimraf.h"
-#include "path-join.h"
+#include "path-join/path-join.h"
 
 /*
  * rm -rf $path
