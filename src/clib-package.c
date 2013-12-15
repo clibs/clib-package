@@ -193,8 +193,12 @@ install_packages(list_t *list, const char *dir, int verbose) {
       return -1;
     }
 
-    clib_package_install(pkg, dir, verbose);
+    int rc = clib_package_install(pkg, dir, verbose);
     clib_package_free(pkg);
+    if (-1 == rc) {
+      list_iterator_destroy(it);
+      return -1;
+    }
   }
 
   list_iterator_destroy(it);
