@@ -25,7 +25,9 @@ typedef struct {
   const char *license;
   const char *install;
   const char *json;
+  const char *url;
   list_t *dependencies;
+  list_t *development;
   list_t *src;
 } clib_package_t;
 
@@ -55,6 +57,9 @@ clib_package_install(clib_package_t *, const char *, int);
 
 int
 clib_package_install_dependencies(clib_package_t *, const char *, int);
+
+int
+clib_package_install_development(clib_package_t *, const char *, int);
 
 void
 clib_package_free(clib_package_t *);

@@ -54,7 +54,7 @@ clib_package_file_url(const char *url, const char *file) {
     + 1  // \0
     ;
 
-  char *res = malloc(size);
+  char *res = malloc(size * sizeof(char));
   if (!res) return NULL;
   sprintf(res, "%s/%s", url, file);
   return res;
@@ -64,14 +64,14 @@ clib_package_file_url(const char *url, const char *file) {
  * Debug/log functions
  */
 
-static void
+static inline void
 clib_package_debug(const char *type, const char *msg, int color) {
   printf("  \033[%dm%10s\033[0m : \033[90m%s\033[m\n", color, type, msg);
 }
 
-static void
+static inline void
 clib_package_log(const char *type, const char *msg, ...) {
-  char *buf = malloc(256);
+  char *buf = malloc(512 * sizeof(char));
   va_list args;
   va_start(args, msg);
   vsprintf(buf, msg, args);
@@ -79,9 +79,9 @@ clib_package_log(const char *type, const char *msg, ...) {
   clib_package_debug(type, msg, 36);
 }
 
-static void
+static inline void
 clib_package_error(const char *type, const char *msg, ...) {
-  char *buf = malloc(256);
+  char *buf = malloc(512 * sizeof(char));
   va_list args;
   va_start(args, msg);
   vsprintf(buf, msg, args);
@@ -89,9 +89,9 @@ clib_package_error(const char *type, const char *msg, ...) {
   clib_package_debug(type, buf, 31);
 }
 
-static void
+static inline void
 clib_package_warn(const char *type, const char *msg, ...) {
-  char *buf = malloc(256);
+  char *buf = malloc(512 * sizeof(char));
   va_list args;
   va_start(args, msg);
   vsprintf(buf, msg, args);
@@ -114,7 +114,7 @@ clib_package_slug(const char *author, const char *name, const char *version) {
     + 1 // \0
     ;
 
-  char *slug = malloc(size);
+  char *slug = malloc(size * sizeof(char));
   sprintf(slug, "%s/%s@%s", author, name, version);
   return slug;
 }
@@ -132,9 +132,73 @@ clib_package_repo(const char *author, const char *name) {
     + 1 // \0
     ;
 
-  char *repo = malloc(size);
+  char *repo = malloc(size * sizeof(char));
   sprintf(repo, "%s/%s", author, name);
   return repo;
+}
+
+/**
+ * Parse the dependencies in the given `obj` into a `list_t`
+ */
+
+static inline list_t *
+parse_package_deps(JSON_Object *obj) {
+  if (NULL == obj) return NULL;
+
+  list_t *list = list_new();
+  if (NULL == list) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < json_object_get_count(obj); i++) {
+    const char *name = json_object_get_name(obj, i);
+    if (!name) {
+      list_destroy(list);
+      return NULL;
+    }
+
+    const char *version = json_object_get_string_safe(obj, name);
+    if (!version) {
+      list_destroy(list);
+      return NULL;
+    }
+
+    clib_package_dependency_t *dep = clib_package_dependency_new(name, version);
+    if (NULL == dep) {
+      list_destroy(list);
+      return NULL;
+    }
+
+    list_node_t *node = list_node_new(dep);
+    list_rpush(list, node);
+  }
+
+  return list;
+}
+
+static inline int
+install_packages(list_t *list, const char *dir, int verbose) {
+  if (!list || !dir) return 0;
+
+  list_node_t *node;
+  list_iterator_t *it = list_iterator_new(list, LIST_HEAD);
+  while ((node = list_iterator_next(it))) {
+    clib_package_dependency_t *dep = node->val;
+    char *slug = clib_package_slug(dep->author, dep->name, dep->version);
+    clib_package_t *pkg = clib_package_new_from_slug(slug, verbose);
+
+    free(slug);
+
+    if (NULL == pkg) {
+      return -1;
+    }
+
+    clib_package_install(pkg, dir, verbose);
+    clib_package_free(pkg);
+  }
+
+  list_iterator_destroy(it);
+  return 0;
 }
 
 /**
@@ -147,9 +211,6 @@ clib_package_new(const char *json, int verbose) {
 
   clib_package_t *pkg = malloc(sizeof(clib_package_t));
   if (!pkg) return NULL;
-
-  pkg->src = NULL;
-  pkg->dependencies = NULL;
 
   JSON_Value *root = json_parse_string(json);
   if (!root) {
@@ -171,9 +232,9 @@ clib_package_new(const char *json, int verbose) {
   pkg->repo = NULL;
   pkg->repo = json_object_get_string_safe(json_object, "repo");
   if (NULL != pkg->repo) {
-    // TODO how do we do this if there's no repo set?
     pkg->author = clib_package_parse_author(pkg->repo);
-    // TODO hack.  yuck.
+    // repo name may not be the package's name.  for example:
+    //   stephenmathieson/str-replace.c -> str-replace
     pkg->repo_name = clib_package_parse_name(pkg->repo);
     // TODO support npm-style "repository"?
   } else {
@@ -198,33 +259,17 @@ clib_package_new(const char *json, int verbose) {
 
     for (size_t i = 0; i < json_array_get_count(src); i++) {
       char *file = json_array_get_string_safe(src, i);
-      if (!file) break; // TODO fail
+      if (!file) break; // TODO fail?
       list_node_t *node = list_node_new(file);
       list_rpush(pkg->src, node);
     }
   }
 
   JSON_Object *deps = json_object_get_object(json_object, "dependencies");
-  if (deps) {
-    pkg->dependencies = list_new();
-    if (!pkg->dependencies) {
-      json_value_free(root);
-      clib_package_free(pkg);
-      return NULL;
-    }
+  pkg->dependencies = parse_package_deps(deps);
 
-    for (size_t i = 0; i < json_object_get_count(deps); i++) {
-      const char *name = json_object_get_name(deps, i);
-      if (!name) break; // TODO fail
-
-      char *version = json_object_get_string_safe(deps, name);
-      if (!version) break; // TODO fail
-
-      clib_package_dependency_t *dep = clib_package_dependency_new(name, version);
-      list_node_t *node = list_node_new(dep);
-      list_rpush(pkg->dependencies, node);
-    }
-  }
+  JSON_Object *devs = json_object_get_object(json_object, "development");
+  pkg->development = parse_package_deps(devs);
 
   json_value_free(root);
   return pkg;
@@ -284,6 +329,8 @@ clib_package_new_from_slug(const char *_slug, int verbose) {
     } else {
       free(repo);
     }
+
+    pkg->url = url;
   }
 
   http_get_free(res);
@@ -308,7 +355,7 @@ clib_package_url(const char *author, const char *name, const char *version) {
     + 1 // \0
     ;
 
-  char *slug = malloc(size);
+  char *slug = malloc(size * sizeof(char));
   if (!slug) return NULL;
 
   sprintf(slug, "https://raw.github.com/%s/%s/%s", author, name, version);
@@ -333,7 +380,7 @@ clib_package_parse_author(const char *slug) {
 
   int delta = name - copy;
   char *author;
-  if (!delta || !(author = malloc(delta))) {
+  if (!delta || !(author = malloc(delta * sizeof(char)))) {
     free(copy);
     return NULL;
   }
@@ -352,8 +399,7 @@ clib_package_parse_version(const char *slug) {
   if (!slug) return NULL;
 
   char *version = strstr(slug, "@");
-  if (!version) return CLIB_PACKAGE_DEFAULT_VERSION;
-
+  if (NULL == version) return CLIB_PACKAGE_DEFAULT_VERSION;
   version++;
   return 0 == strcmp("*", version)
     ? CLIB_PACKAGE_DEFAULT_VERSION
@@ -389,17 +435,6 @@ clib_package_parse_name(const char *slug) {
   }
 
   return name;
-}
-
-/**
- * Free a clib package
- */
-
-void
-clib_package_free(clib_package_t *pkg) {
-  if (pkg->src) list_destroy(pkg->src);
-  if (pkg->dependencies) list_destroy(pkg->dependencies);
-  free(pkg);
 }
 
 /**
@@ -443,8 +478,10 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     return -1;
   }
 
-  char *base_url = clib_package_url(pkg->author, pkg->repo_name, pkg->version);
-  if (NULL == base_url) {
+  if (NULL == pkg->url) {
+    pkg->url = clib_package_url(pkg->author, pkg->repo_name, pkg->version);
+  }
+  if (NULL == pkg->url) {
     free(pkg_dir);
     return -1;
   }
@@ -455,7 +492,6 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     char *package_json = path_join(pkg_dir, "package.json");
     if (NULL == package_json) {
       free(pkg_dir);
-      free(base_url);
       return -1;
     }
 
@@ -471,13 +507,12 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
 
       // download source file
 
-      char *file_url = clib_package_file_url(base_url, filename);
+      char *file_url = clib_package_file_url(pkg->url, filename);
       char *file_path = path_join(pkg_dir, basename(filename));
 
       if (NULL == file_url || NULL == file_path) {
         if (file_url) free(file_url);
         free(pkg_dir);
-        free(base_url);
         return -1;
       }
 
@@ -492,7 +527,6 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
       if (-1 == rc) {
         if (verbose) clib_package_error("error", "unable to fetch %s", file_url);
         free(pkg_dir);
-        free(base_url);
         return -1;
       }
     }
@@ -512,20 +546,29 @@ clib_package_install_dependencies(clib_package_t *pkg, const char *dir, int verb
   if (!pkg || !dir) return -1;
   if (NULL == pkg->dependencies) return 0;
 
-  list_node_t *node;
-  list_iterator_t *it = list_iterator_new(pkg->dependencies, LIST_HEAD);
-  while ((node = list_iterator_next(it))) {
-    clib_package_dependency_t *dep = node->val;
-    char *slug = clib_package_slug(dep->author, dep->name, dep->version);
-    clib_package_t *pkg = clib_package_new_from_slug(slug, verbose);
-    free(slug);
-    if (NULL == pkg) {
-      return -1;
-    }
+  return install_packages(pkg->dependencies, dir, verbose);
+}
 
-    clib_package_install(pkg, dir, verbose);
-  }
+/**
+ * Install the given `pkg`'s development dependencies in `dir`
+ */
 
-  list_iterator_destroy(it);
-  return 0;
+int
+clib_package_install_development(clib_package_t *pkg, const char *dir, int verbose) {
+  if (!pkg || !dir) return -1;
+  if (NULL == pkg->development) return 0;
+
+  return install_packages(pkg->development, dir, verbose);
+}
+
+/**
+ * Free a clib package
+ */
+
+void
+clib_package_free(clib_package_t *pkg) {
+  if (pkg->src) list_destroy(pkg->src);
+  if (pkg->dependencies) list_destroy(pkg->dependencies);
+  if (pkg->development) list_destroy(pkg->development);
+  free(pkg);
 }
