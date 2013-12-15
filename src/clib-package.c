@@ -534,11 +534,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     list_iterator_destroy(it);
   }
 
-  if (-1 == clib_package_install_dependencies(pkg, dir, verbose)) {
-    return -1;
-  }
-
-  return clib_package_install_development(pkg, dir, verbose);
+  return clib_package_install_dependencies(pkg, dir, verbose);
 }
 
 /**
