@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include "str-copy/str-copy.h"
 #include "parson/parson.h"
 #include "substr/substr.h"
 #include "http-get/http-get.h"
@@ -23,7 +24,7 @@ static inline char *
 json_object_get_string_safe(JSON_Object *obj, const char *key) {
   const char *val = json_object_get_string(obj, key);
   if (!val) return NULL;
-  return strdup(val);
+  return str_copy(val);
 }
 
 /**
@@ -36,7 +37,7 @@ static inline char *
 json_array_get_string_safe(JSON_Array *array, int index) {
   const char *val = json_array_get_string(array, index);
   if (!val) return NULL;
-  return strdup(val);
+  return str_copy(val);
 }
 
 /**
@@ -230,7 +231,7 @@ clib_package_new(const char *json, int verbose) {
     return NULL;
   }
 
-  pkg->json = strdup(json);
+  pkg->json = str_copy(json);
   pkg->name = json_object_get_string_safe(json_object, "name");
 
   pkg->repo = NULL;
@@ -373,7 +374,7 @@ clib_package_url(const char *author, const char *name, const char *version) {
 char *
 clib_package_parse_author(const char *slug) {
   char *copy;
-  if (!slug || !(copy = strdup(slug))) return NULL;
+  if (!slug || !(copy = str_copy(slug))) return NULL;
 
   // if missing /, author = clibs
   char *name = strstr(copy, "/");
@@ -417,7 +418,7 @@ clib_package_parse_version(const char *slug) {
 char *
 clib_package_parse_name(const char *slug) {
   char *copy;
-  if (!slug || !(copy = strdup(slug))) return NULL;
+  if (!slug || !(copy = str_copy(slug))) return NULL;
 
   char *version = strstr(copy, "@");
   if (version) {
@@ -456,7 +457,7 @@ clib_package_dependency_new(const char *repo, const char *version) {
 
   dep->version = 0 == strcmp("*", version)
     ? CLIB_PACKAGE_DEFAULT_VERSION
-    : strdup(version);
+    : str_copy(version);
   dep->name = clib_package_parse_name(repo);
   dep->author = clib_package_parse_author(repo);
   dep->next = NULL;

@@ -13,7 +13,8 @@
     "stephenmathieson/http-get.c": "*",
     "stephenmathieson/mkdirp.c": "*",
     "jwerle/fs.c": "*",
-    "stephenmathieson/path-join.c": "*"
+    "stephenmathieson/path-join.c": "*",
+    "stephenmathieson/str-copy.c": "0.0.3"
   },
   "development": {
     "stephenmathieson/describe.h": "1.0.0"
