@@ -268,6 +268,8 @@ clib_package_new(const char *json, int verbose) {
       list_node_t *node = list_node_new(file);
       list_rpush(pkg->src, node);
     }
+  } else {
+    pkg->src = NULL;
   }
 
   JSON_Object *deps = json_object_get_object(json_object, "dependencies");

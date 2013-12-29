@@ -64,4 +64,18 @@ describe("clib_package_new", {
     clib_package_free(pkg);
   });
 
+  it("should support missing src", {
+    char json[] =
+      "{"
+      "  \"name\": \"foo\","
+      "  \"version\": \"1.0.0\","
+      "  \"repo\": \"foobar/foo\","
+      "  \"license\": \"mit\","
+      "  \"description\": \"lots of foo\""
+      "}";
+
+    clib_package_t *pkg = clib_package_new(json, 0);
+    assert(pkg);
+    clib_package_free(pkg);
+  });
 });
