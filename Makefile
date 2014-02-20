@@ -9,7 +9,7 @@ LDFLAGS = -lcurl
 test: $(TESTS)
 
 $(TESTS):
-	@$(CC) $(CFLAGS) $(LDFLAGS) $@ $(SRC) -o $(basename $@)
+	@$(CC) $(CFLAGS) -o $(basename $@) $@ $(SRC) $(LDFLAGS)
 	@./$(basename $@)
 
 example: example.c $(SRC)
