@@ -3,6 +3,8 @@
 
   Internal bits of clib-install(1) for fetching packages.
 
+[![Build Status](https://travis-ci.org/stephenmathieson/clib-package.png?branch=master)](https://travis-ci.org/stephenmathieson/clib-package)
+
 ## Installation
 
   Install with [clib(1)](https://github.com/clibs/clib):
