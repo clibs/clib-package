@@ -10,3 +10,4 @@ test/package-parse-version
 test/package-url
 example
 test/package-install-dev-dependencies
+deps
