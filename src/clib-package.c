@@ -403,6 +403,7 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   // force version number
   if (pkg->version) {
     if (0 != strcmp(version, pkg->version)) {
+      free(pkg->version);
       pkg->version = version;
     } else {
       free(version);
@@ -414,23 +415,25 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   // force package author (don't know how this could fail)
   if (pkg->author) {
     if (0 != strcmp(author, pkg->author)) {
+      free(pkg->author);
       pkg->author = author;
     } else {
       free(author);
     }
   } else {
-    free(author);
+    pkg->author = author;
   }
 
-  // force package repo (some people are too cool to use a "repo" property)
+  // force package repo
   if (pkg->repo) {
     if (0 != strcmp(repo, pkg->repo)) {
+      free(pkg->repo);
       pkg->repo = repo;
     } else {
       free(repo);
     }
   } else {
-    free(repo);
+    pkg->repo = repo;
   }
 
   pkg->url = url;
