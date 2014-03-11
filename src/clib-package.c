@@ -429,7 +429,11 @@ clib_package_url(const char *author, const char *name, const char *version) {
   char *slug = malloc(size);
   if (slug) {
     memset(slug, '\0', size);
-    sprintf(slug, "https://raw.github.com/%s/%s/%s", author, name, version);
+    sprintf(slug
+      , "https://raw.github.com/%s/%s/%s"
+      , author
+      , name
+      , version);
   }
   return slug;
 }
@@ -490,76 +494,86 @@ clib_package_dependency_new(const char *repo, const char *version) {
 
 int
 clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
-  if (!pkg || !dir) return -1;
+  char *pkg_dir = NULL;
+  char *package_json = NULL;
+  list_iterator_t *iterator = NULL;
+  int rc = -1;
 
-  char *pkg_dir = path_join(dir, pkg->name);
-  if (NULL == pkg_dir) {
-    return -1;
-  }
+  if (!pkg || !dir) goto cleanup;
+  if (!(pkg_dir = path_join(dir, pkg->name))) goto cleanup;
 
-  if (-1 == mkdirp(pkg_dir, 0777)) {
-    free(pkg_dir);
-    return -1;
-  }
+  // create directory for pkg
+  if (-1 == mkdirp(pkg_dir, 0777)) goto cleanup;
 
   if (NULL == pkg->url) {
-    pkg->url = clib_package_url(pkg->author, pkg->repo_name, pkg->version);
-  }
-  if (NULL == pkg->url) {
-    free(pkg_dir);
-    return -1;
+    pkg->url = clib_package_url(pkg->author
+      , pkg->repo_name
+      , pkg->version);
+    if (NULL == pkg->url) goto cleanup;
   }
 
-  if (NULL != pkg->src) {
-    // write package.json
+  // if no sources are listed, just install
+  if (NULL == pkg->src) goto install;
 
-    char *package_json = path_join(pkg_dir, "package.json");
-    if (NULL == package_json) {
-      free(pkg_dir);
-      return -1;
+  // write package.json
+  if (!(package_json = path_join(pkg_dir, "package.json"))) goto cleanup;
+  if (-1 == fs_write(package_json, pkg->json)) {
+    clib_package_error("error", "Failed to write %s", package_json);
+    goto cleanup;
+  }
+
+  iterator = list_iterator_new(pkg->src, LIST_HEAD);
+  list_node_t *source;
+  while ((source = list_iterator_next(iterator))) {
+    char *filename = NULL;
+    char *file_url = NULL;
+    char *file_path = NULL;
+    int error = 0;
+
+    filename = source->val;
+
+    // get file URL to fetch
+    if (!(file_url = clib_package_file_url(pkg->url, filename))) {
+      error = 1;
+      goto loop_cleanup;
     }
 
-    fs_write(package_json, pkg->json);
-    free(package_json);
-
-    // write each source
-
-    list_node_t *node;
-    list_iterator_t *it = list_iterator_new(pkg->src, LIST_HEAD);
-    while ((node = list_iterator_next(it))) {
-      char *filename = node->val;
-
-      // download source file
-
-      char *file_url = clib_package_file_url(pkg->url, filename);
-      char *file_path = path_join(pkg_dir, basename(filename));
-
-      if (NULL == file_url || NULL == file_path) {
-        if (file_url) free(file_url);
-        free(pkg_dir);
-        return -1;
-      }
-
-      if (verbose) {
-        clib_package_log("fetch", file_url);
-        clib_package_log("save", file_path);
-      }
-
-      int rc = http_get_file(file_url, file_path);
-      free(file_path);
-      if (-1 == rc) {
-        if (verbose) clib_package_error("error", "unable to fetch %s", file_url);
-        free(pkg_dir);
-        free(file_url);
-        return -1;
-      }
-      free(file_url);
+    // get file path to save
+    if (!(file_path = path_join(pkg_dir, basename(filename)))) {
+      error = 1;
+      goto loop_cleanup;
     }
 
-    list_iterator_destroy(it);
+    // TODO the whole URL is overkill and floods my terminal
+    if (verbose) clib_package_log("fetch", file_url);
+
+    // fetch source file and save to disk
+    if (-1 == http_get_file(file_url, file_path)) {
+      clib_package_error("error", "unable to fetch %s", file_url);
+      error = 1;
+      goto loop_cleanup;
+    }
+
+    if (verbose) clib_package_log("save", file_path);
+
+  loop_cleanup:
+    if (file_url) free(file_url);
+    if (file_path) free(file_path);
+    if (error) {
+      list_iterator_destroy(iterator);
+      rc = -1;
+      goto cleanup;
+    }
   }
 
-  return clib_package_install_dependencies(pkg, dir, verbose);
+install:
+  rc = clib_package_install_dependencies(pkg, dir, verbose);
+
+cleanup:
+  if (pkg_dir) free(pkg_dir);
+  if (package_json) free(package_json);
+  if (iterator) list_iterator_destroy(iterator);
+  return rc;
 }
 
 /**
@@ -567,7 +581,9 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
  */
 
 int
-clib_package_install_dependencies(clib_package_t *pkg, const char *dir, int verbose) {
+clib_package_install_dependencies(clib_package_t *pkg
+    , const char *dir
+    , int verbose) {
   if (!pkg || !dir) return -1;
   if (NULL == pkg->dependencies) return 0;
 
@@ -579,7 +595,9 @@ clib_package_install_dependencies(clib_package_t *pkg, const char *dir, int verb
  */
 
 int
-clib_package_install_development(clib_package_t *pkg, const char *dir, int verbose) {
+clib_package_install_development(clib_package_t *pkg
+    , const char *dir
+    , int verbose) {
   if (!pkg || !dir) return -1;
   if (NULL == pkg->development) return 0;
 
