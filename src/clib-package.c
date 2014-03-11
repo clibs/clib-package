@@ -645,6 +645,7 @@ clib_package_free(clib_package_t *pkg) {
   if (pkg->repo) free(pkg->repo);
   if (pkg->repo_name) free(pkg->repo_name);
   if (pkg->url) free(pkg->url);
+  if (pkg->version) free(pkg->version);
   if (pkg->src) list_destroy(pkg->src);
   if (pkg->dependencies) list_destroy(pkg->dependencies);
   if (pkg->development) list_destroy(pkg->development);
