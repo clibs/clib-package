@@ -401,22 +401,34 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   if (!pkg) goto error;
 
   // force version number
-  if (NULL == pkg->version || 0 != strcmp(version, pkg->version)) {
-    pkg->version = version;
+  if (pkg->version) {
+    if (0 != strcmp(version, pkg->version)) {
+      pkg->version = version;
+    } else {
+      free(version);
+    }
   } else {
-    free(version);
+    pkg->version = version;
   }
 
   // force package author (don't know how this could fail)
-  if (NULL == pkg->author || 0 != strcmp(author, pkg->author)) {
-    pkg->author = author;
+  if (pkg->author) {
+    if (0 != strcmp(author, pkg->author)) {
+      pkg->author = author;
+    } else {
+      free(author);
+    }
   } else {
     free(author);
   }
 
   // force package repo (some people are too cool to use a "repo" property)
-  if (NULL == pkg->repo || 0 != strcmp(repo, pkg->repo)) {
-    pkg->repo = repo;
+  if (pkg->repo) {
+    if (0 != strcmp(repo, pkg->repo)) {
+      pkg->repo = repo;
+    } else {
+      free(repo);
+    }
   } else {
     free(repo);
   }
