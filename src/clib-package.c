@@ -126,6 +126,7 @@ clib_package_log(const char *type, const char *msg, ...) {
   vsprintf(buf, msg, args);
   va_end(args);
   clib_package_debug(type, msg, 36);
+  free(buf);
 }
 
 static inline void
@@ -136,6 +137,7 @@ clib_package_error(const char *type, const char *msg, ...) {
   vsprintf(buf, msg, args);
   va_end(args);
   clib_package_debug(type, buf, 31);
+  free(buf);
 }
 
 static inline void
@@ -146,6 +148,7 @@ clib_package_warn(const char *type, const char *msg, ...) {
   vsprintf(buf, msg, args);
   va_end(args);
   clib_package_debug(type, buf, 33);
+  free(buf);
 }
 
 
