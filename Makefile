@@ -6,14 +6,12 @@ SRC += $(wildcard deps/*/*.c)
 OBJS = $(SRC:.c=.o)
 TESTS = $(wildcard test/*.c)
 CFLAGS = -std=c99 -Wall -Isrc -Ideps
-CFLAGS += -DDEFAULT_REPO_OWNER=\"clibs\"
-CFLAGS += -DDEFAULT_REPO_VERSION=\"master\"
 LDFLAGS = -lcurl
 VALGRIND_OPTS ?= --leak-check=full
 
-test: $(OBJS) $(TESTS)
+test: $(TESTS)
 
-$(TESTS):
+$(TESTS): $(OBJS)
 	@$(CC) $(CFLAGS) -o $(basename $@) $@ $(OBJS) $(LDFLAGS)
 	@$(TEST_RUNNER) ./$(basename $@)
 
@@ -31,4 +29,4 @@ clean:
 	$(foreach t, $(TESTS), rm -f $(basename $(t));)
 	rm -f example $(OBJS)
 
-.PHONY: test $(TESTS) clean
+.PHONY: test $(TESTS) clean grind

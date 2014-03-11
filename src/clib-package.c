@@ -22,6 +22,14 @@
 
 #include "clib-package.h"
 
+#ifndef DEFAULT_REPO_VERSION
+#define DEFAULT_REPO_VERSION "master"
+#endif
+
+#ifndef DEFAULT_REPO_OWNER
+#define DEFAULT_REPO_OWNER "clibs"
+#endif
+
 /**
  * Pre-declare prototypes.
  */
@@ -316,7 +324,7 @@ clib_package_new(const char *json, int verbose) {
 
   // TODO npm-style "repository" (thlorenz/gumbo-parser.c#1)
   if (pkg->repo) {
-    pkg->author = parse_repo_owner(pkg->repo);
+    pkg->author = parse_repo_owner(pkg->repo, DEFAULT_REPO_OWNER);
     // repo name may not be package name (thing.c -> thing)
     pkg->repo_name = parse_repo_name(pkg->repo);
   } else {
@@ -381,9 +389,9 @@ clib_package_new_from_slug(const char *slug, int verbose) {
 
   // parse chunks
   if (!slug) goto error;
-  if (!(author = parse_repo_owner(slug))) goto error;
+  if (!(author = parse_repo_owner(slug, DEFAULT_REPO_OWNER))) goto error;
   if (!(name = parse_repo_name(slug))) goto error;
-  if (!(version = parse_repo_version(slug))) goto error;
+  if (!(version = parse_repo_version(slug, DEFAULT_REPO_VERSION))) goto error;
   if (!(url = clib_package_url(author, name, version))) goto error;
   if (!(json_url = clib_package_file_url(url, "package.json"))) goto error;
   if (!(repo = clib_package_repo(author, name))) goto error;
@@ -491,7 +499,7 @@ clib_package_url(const char *author, const char *name, const char *version) {
 
 char *
 clib_package_parse_author(const char *slug) {
-  return parse_repo_owner(slug);
+  return parse_repo_owner(slug, DEFAULT_REPO_OWNER);
 }
 
 /**
@@ -500,7 +508,7 @@ clib_package_parse_author(const char *slug) {
 
 char *
 clib_package_parse_version(const char *slug) {
-  return parse_repo_version(slug);
+  return parse_repo_version(slug, DEFAULT_REPO_VERSION);
 }
 
 /**
