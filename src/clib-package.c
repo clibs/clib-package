@@ -232,29 +232,58 @@ parse_package_deps(JSON_Object *obj) {
 
 static inline int
 install_packages(list_t *list, const char *dir, int verbose) {
-  if (!list || !dir) return 0;
+  list_node_t *node = NULL;
+  list_iterator_t *iterator = NULL;
+  int rc = -1;
 
-  list_node_t *node;
-  list_iterator_t *it = list_iterator_new(list, LIST_HEAD);
-  while ((node = list_iterator_next(it))) {
-    clib_package_dependency_t *dep = node->val;
-    char *slug = clib_package_slug(dep->author, dep->name, dep->version);
-    if (NULL == slug) return -1;
+  if (!list || !dir) goto cleanup;
 
-    clib_package_t *pkg = clib_package_new_from_slug(slug, verbose);
-    free(slug);
-    if (NULL == pkg) return -1;
+  iterator = list_iterator_new(list, LIST_HEAD);
+  if (NULL == iterator) goto cleanup;
 
-    int rc = clib_package_install(pkg, dir, verbose);
-    clib_package_free(pkg);
-    if (-1 == rc) {
-      list_iterator_destroy(it);
-      return -1;
+  while ((node = list_iterator_next(iterator))) {
+    clib_package_dependency_t *dep = NULL;
+    char *slug = NULL;
+    clib_package_t *pkg = NULL;
+    int error = 1;
+
+    dep = (clib_package_dependency_t *) node->val;
+    printf("dep\n");
+    printf("  name: %s\n", dep->name);
+    printf("  version: %s\n", dep->version);
+    printf("  author: %s\n", dep->author);
+
+    slug = clib_package_slug(dep->author, dep->name, dep->version);
+    if (NULL == slug) goto loop_cleanup;
+    printf("slug '%s'\n", slug);
+
+    pkg = clib_package_new_from_slug(slug, verbose);
+    if (NULL == pkg) goto loop_cleanup;
+    printf("parsed package\n");
+
+    printf("installing\n");
+    if (-1 == clib_package_install(pkg, dir, verbose)) goto loop_cleanup;
+    printf("installed\n");
+
+
+    error = 0;
+
+  loop_cleanup:
+    if (slug) free(slug);
+    if (pkg) clib_package_free(pkg);
+    if (error) {
+      list_iterator_destroy(iterator);
+      rc = -1;
+      goto cleanup;
     }
   }
 
-  list_iterator_destroy(it);
-  return 0;
+  rc = 0;
+
+cleanup:
+  if (iterator) list_iterator_destroy(iterator);
+  printf("returning with %d\n", rc);
+  return rc;
 }
 
 /**
@@ -314,6 +343,7 @@ clib_package_new(const char *json, int verbose) {
       clib_package_free(pkg);
       return NULL;
     }
+    pkg->src->free = free;
 
     for (size_t i = 0; i < json_array_get_count(src); i++) {
       char *file = json_array_get_string_safe(src, i);
