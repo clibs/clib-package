@@ -294,12 +294,17 @@ clib_package_new(const char *json, int verbose) {
   int error = 1;
 
   if (!json) goto cleanup;
-  if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
-  if (!(root = json_parse_string(json))) goto cleanup;
-  if (!(json_object = json_value_get_object(root))) {
+  if (!(root = json_parse_string(json))) {
     clib_package_error("error", "unable to parse json");
     goto cleanup;
   }
+  if (!(json_object = json_value_get_object(root))) {
+    clib_package_error("error", "invalid package.json");
+    goto cleanup;
+  }
+  if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
+
+  memset(pkg, '\0', sizeof(clib_package_t));
 
   pkg->json = str_copy(json);
   pkg->name = json_object_get_string_safe(json_object, "name");
