@@ -4,6 +4,8 @@
 
 
 describe("clib_package_parse_name", {
+  char *name = NULL;
+
   it("should return NULL when given a bad slug", {
     assert(NULL == clib_package_parse_name(NULL));
   });
@@ -14,16 +16,25 @@ describe("clib_package_parse_name", {
   });
 
   it("should support the \"name\"-style slugs", {
-    assert_str_equal("name", clib_package_parse_name("name"));
+    name = clib_package_parse_name("name");
+    assert_str_equal("name", name);
+    free(name);
   });
 
   it("should support \"author/name\"-style slugs", {
-    assert_str_equal("name", clib_package_parse_name("author/name"));
+    name = clib_package_parse_name("author/name");
+    assert_str_equal("name", name);
+    free(name);
   });
 
   it("should support \"author/name@version\"-slugs slugs", {
-    assert_str_equal("name", clib_package_parse_name("author/name@master"));
-    assert_str_equal("name", clib_package_parse_name("author/name@*"));
+    name = clib_package_parse_name("author/name@master");
+    assert_str_equal("name", name);
+    free(name);
+
+    name = clib_package_parse_name("author/name@*");
+    assert_str_equal("name", name);
+    free(name);
   });
 
   // this was a bug in parse-repo.c...
@@ -38,5 +49,6 @@ describe("clib_package_parse_name", {
     free(slug);
 
     assert_str_equal("name", name);
+    free(name);
   });
 });
