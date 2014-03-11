@@ -9,6 +9,7 @@ CFLAGS = -std=c99 -Wall -Isrc -Ideps
 CFLAGS += -DDEFAULT_REPO_OWNER=\"clibs\"
 CFLAGS += -DDEFAULT_REPO_VERSION=\"master\"
 LDFLAGS = -lcurl
+VALGRIND_OPTS ?= --leak-check=full
 
 test: $(OBJS) $(TESTS)
 
@@ -17,7 +18,7 @@ $(TESTS):
 	@$(TEST_RUNNER) ./$(basename $@)
 
 grind:
-	@TEST_RUNNER="$(VALGRIND) --error-exitcode=2" \
+	@TEST_RUNNER="$(VALGRIND) $(VALGRIND_OPTS)" \
 		$(MAKE) test
 
 %.o: %.c
