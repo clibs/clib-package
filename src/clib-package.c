@@ -295,8 +295,6 @@ clib_package_new(const char *json, int verbose) {
 
   if (!json) goto cleanup;
   if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
-  memset(pkg, '\0', sizeof(clib_package_t));
-
   if (!(root = json_parse_string(json))) goto cleanup;
   if (!(json_object = json_value_get_object(root))) {
     clib_package_error("error", "unable to parse json");
