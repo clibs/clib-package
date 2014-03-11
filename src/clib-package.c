@@ -23,7 +23,7 @@
 #include "clib-package.h"
 
 /**
- * Private pre-declare prototypes.
+ * Pre-declare prototypes.
  */
 
 static inline char *
@@ -104,9 +104,11 @@ clib_package_file_url(const char *url, const char *file) {
     + 1  // \0
     ;
 
-  char *res = malloc(size * sizeof(char));
-  if (!res) return NULL;
-  sprintf(res, "%s/%s", url, file);
+  char *res = malloc(size);
+  if (res) {
+    memset(res, '\0', size);
+    sprintf(res, "%s/%s", url, file);
+  }
   return res;
 }
 
@@ -165,8 +167,11 @@ clib_package_slug(const char *author, const char *name, const char *version) {
     + 1 // \0
     ;
 
-  char *slug = malloc(size * sizeof(char));
-  sprintf(slug, "%s/%s@%s", author, name, version);
+  char *slug = malloc(size);
+  if (slug) {
+    memset(slug, '\0', size);
+    sprintf(slug, "%s/%s@%s", author, name, version);
+  }
   return slug;
 }
 
@@ -183,8 +188,11 @@ clib_package_repo(const char *author, const char *name) {
     + 1 // \0
     ;
 
-  char *repo = malloc(size * sizeof(char));
-  sprintf(repo, "%s/%s", author, name);
+  char *repo = malloc(size);
+  if (repo) {
+    memset(repo, '\0', size);
+    sprintf(repo, "%s/%s", author, name);
+  }
   return repo;
 }
 
@@ -194,39 +202,35 @@ clib_package_repo(const char *author, const char *name) {
 
 static inline list_t *
 parse_package_deps(JSON_Object *obj) {
-  if (NULL == obj) return NULL;
+  list_t *list = NULL;
 
-  list_t *list = list_new();
-  if (NULL == list) {
-    return NULL;
-  }
-
+  if (!obj) goto done;
+  if (!(list = list_new())) goto done;
   list->free = clib_package_dependency_free;
 
-  for (size_t i = 0; i < json_object_get_count(obj); i++) {
-    const char *name = json_object_get_name(obj, i);
-    if (!name) {
-      list_destroy(list);
-      return NULL;
-    }
+  for (unsigned int i = 0; i < json_object_get_count(obj); i++) {
+    const char *name = NULL;
+    char *version = NULL;
+    clib_package_dependency_t *dep = NULL;
+    int error = 1;
 
-    const char *version = json_object_get_string_safe(obj, name);
-    if (!version) {
-      list_destroy(list);
-      return NULL;
-    }
+    if (!(name = json_object_get_name(obj, i))) goto loop_cleanup;
+    if (!(version = json_object_get_string_safe(obj, name))) goto loop_cleanup;
+    if (!(dep = clib_package_dependency_new(name, version))) goto loop_cleanup;
+    if (!(list_rpush(list, list_node_new(dep)))) goto loop_cleanup;
 
-    clib_package_dependency_t *dep =
-      clib_package_dependency_new(name, version);
-    if (NULL == dep) {
-      list_destroy(list);
-      return NULL;
-    }
+    error = 0;
 
-    list_node_t *node = list_node_new(dep);
-    list_rpush(list, node);
+  loop_cleanup:
+    if (version) free(version);
+    if (error) {
+      list_destroy(list);
+      list = NULL;
+      break;
+    }
   }
 
+done:
   return list;
 }
 
@@ -248,23 +252,13 @@ install_packages(list_t *list, const char *dir, int verbose) {
     int error = 1;
 
     dep = (clib_package_dependency_t *) node->val;
-    printf("dep\n");
-    printf("  name: %s\n", dep->name);
-    printf("  version: %s\n", dep->version);
-    printf("  author: %s\n", dep->author);
-
     slug = clib_package_slug(dep->author, dep->name, dep->version);
     if (NULL == slug) goto loop_cleanup;
-    printf("slug '%s'\n", slug);
 
     pkg = clib_package_new_from_slug(slug, verbose);
     if (NULL == pkg) goto loop_cleanup;
-    printf("parsed package\n");
 
-    printf("installing\n");
     if (-1 == clib_package_install(pkg, dir, verbose)) goto loop_cleanup;
-    printf("installed\n");
-
 
     error = 0;
 
@@ -282,7 +276,6 @@ install_packages(list_t *list, const char *dir, int verbose) {
 
 cleanup:
   if (iterator) list_iterator_destroy(iterator);
-  printf("returning with %d\n", rc);
   return rc;
 }
 
