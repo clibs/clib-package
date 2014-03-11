@@ -283,6 +283,26 @@ cleanup:
  * Create a new clib package from the given `json`
  */
 
+
+static char * get_package_name_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "name");
+}
+static char * get_package_repo_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "repo");
+}
+static char * get_package_version_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "version");
+}
+static char * get_package_license_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "license");
+}
+static char * get_package_description_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "description");
+}
+static char * get_package_install_from_object(JSON_Object *o) {
+  return json_object_get_string_safe(o, "install");
+}
+
 clib_package_t *
 clib_package_new(const char *json, int verbose) {
   clib_package_t *pkg = NULL;
@@ -302,12 +322,20 @@ clib_package_new(const char *json, int verbose) {
   }
 
   pkg->json = str_copy(json);
+  /*
   pkg->name = json_object_get_string_safe(json_object, "name");
   pkg->repo = json_object_get_string_safe(json_object, "repo");
   pkg->version = json_object_get_string_safe(json_object, "version");
   pkg->license = json_object_get_string_safe(json_object, "license");
   pkg->description = json_object_get_string_safe(json_object, "description");
   pkg->install = json_object_get_string_safe(json_object, "install");
+  */
+pkg->name = get_package_name_from_object(json_object);
+pkg->repo = get_package_repo_from_object(json_object);
+pkg->version = get_package_version_from_object(json_object);
+pkg->license = get_package_license_from_object(json_object);
+pkg->description = get_package_description_from_object(json_object);
+pkg->install = get_package_install_from_object(json_object);
 
   // TODO npm-style "repository" (thlorenz/gumbo-parser.c#1)
   if (pkg->repo) {
