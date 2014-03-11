@@ -555,6 +555,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     char *filename = NULL;
     char *file_url = NULL;
     char *file_path = NULL;
+    char *file_basename = NULL;
     int error = 0;
 
     filename = source->val;
@@ -566,7 +567,12 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     }
 
     // get file path to save
-    if (!(file_path = path_join(pkg_dir, basename(filename)))) {
+    if (!(file_basename = basename(filename))) {
+      error = 1;
+      goto loop_cleanup;
+    }
+
+    if (!(file_path = path_join(pkg_dir, file_basename))) {
       error = 1;
       goto loop_cleanup;
     }
@@ -585,6 +591,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
 
   loop_cleanup:
     if (file_url) free(file_url);
+    if (file_basename) free(file_basename);
     if (file_path) free(file_path);
     if (error) {
       list_iterator_destroy(iterator);
