@@ -393,6 +393,8 @@ clib_package_new_from_slug(const char *slug, int verbose) {
     goto error;
   }
 
+  free(json_url);
+
   // build package
   pkg = clib_package_new(res->data, verbose);
   http_get_free(res);
