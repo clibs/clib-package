@@ -511,8 +511,6 @@ clib_package_dependency_new(const char *repo, const char *version) {
     : str_copy(version);
   dep->name = clib_package_parse_name(repo);
   dep->author = clib_package_parse_author(repo);
-  dep->next = NULL;
-
   return dep;
 }
 
@@ -638,14 +636,14 @@ clib_package_install_development(clib_package_t *pkg
 
 void
 clib_package_free(clib_package_t *pkg) {
-  if (pkg->name) free(pkg->name);
   if (pkg->author) free(pkg->author);
-  if (pkg->repo) free(pkg->repo);
-  if (pkg->repo_name) free(pkg->repo_name);
   if (pkg->description) free(pkg->description);
-  if (pkg->license) free(pkg->license);
   if (pkg->install) free(pkg->install);
   if (pkg->json) free(pkg->json);
+  if (pkg->license) free(pkg->license);
+  if (pkg->name) free(pkg->name);
+  if (pkg->repo) free(pkg->repo);
+  if (pkg->repo_name) free(pkg->repo_name);
   if (pkg->url) free(pkg->url);
   if (pkg->src) list_destroy(pkg->src);
   if (pkg->dependencies) list_destroy(pkg->dependencies);

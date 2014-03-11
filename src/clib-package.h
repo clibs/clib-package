@@ -11,25 +11,23 @@
 
 #include "list/list.h"
 
-typedef struct clib_package_dependency {
-  char *name;
-  char *author;
-  char *version;
-  struct clib_package_dependency *next;
-  struct clib_package_dependency *prev;
-} clib_package_dependency_t;
-
 typedef struct {
   char *name;
   char *author;
   char *version;
-  char *repo;
-  char *repo_name;
+} clib_package_dependency_t;
+
+typedef struct {
+  char *author;
   char *description;
-  char *license;
   char *install;
   char *json;
+  char *license;
+  char *name;
+  char *repo;
+  char *repo_name;
   char *url;
+  char *version;
   list_t *dependencies;
   list_t *development;
   list_t *src;
