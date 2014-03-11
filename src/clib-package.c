@@ -18,8 +18,50 @@
 #include "mkdirp/mkdirp.h"
 #include "fs/fs.h"
 #include "path-join/path-join.h"
+#include "parse-repo/parse-repo.h"
 
 #include "clib-package.h"
+
+/**
+ * Private pre-declare prototypes.
+ */
+
+static inline char *
+json_object_get_string_safe(JSON_Object *, const char *);
+
+static inline char *
+json_array_get_string_safe(JSON_Array *, int);
+
+static inline char *
+clib_package_file_url(const char *, const char *);
+
+static inline void
+clib_package_debug(const char *, const char *, int);
+
+static inline void
+clib_package_log(const char *, const char *, ...);
+
+static inline void
+clib_package_error(const char *, const char *, ...);
+
+static inline void
+clib_package_warn(const char *, const char *, ...);
+
+static inline char *
+clib_package_slug(const char *, const char *, const char *);
+
+static inline char *
+clib_package_repo(const char *, const char *);
+
+static inline list_t *
+parse_package_deps(JSON_Object *);
+
+static inline int
+install_packages(list_t *, const char *, int);
+
+static void
+clib_package_dependency_free(void *);
+
 
 /**
  * Create a copy of the result of a `json_object_get_string`
@@ -107,6 +149,7 @@ clib_package_warn(const char *type, const char *msg, ...) {
   clib_package_debug(type, buf, 33);
 }
 
+
 /**
  * Build a slug
  */
@@ -158,6 +201,8 @@ parse_package_deps(JSON_Object *obj) {
     return NULL;
   }
 
+  list->free = clib_package_dependency_free;
+
   for (size_t i = 0; i < json_object_get_count(obj); i++) {
     const char *name = json_object_get_name(obj, i);
     if (!name) {
@@ -171,7 +216,8 @@ parse_package_deps(JSON_Object *obj) {
       return NULL;
     }
 
-    clib_package_dependency_t *dep = clib_package_dependency_new(name, version);
+    clib_package_dependency_t *dep =
+      clib_package_dependency_new(name, version);
     if (NULL == dep) {
       list_destroy(list);
       return NULL;
@@ -193,13 +239,11 @@ install_packages(list_t *list, const char *dir, int verbose) {
   while ((node = list_iterator_next(it))) {
     clib_package_dependency_t *dep = node->val;
     char *slug = clib_package_slug(dep->author, dep->name, dep->version);
+    if (NULL == slug) return -1;
+
     clib_package_t *pkg = clib_package_new_from_slug(slug, verbose);
-
     free(slug);
-
-    if (NULL == pkg) {
-      return -1;
-    }
+    if (NULL == pkg) return -1;
 
     int rc = clib_package_install(pkg, dir, verbose);
     clib_package_free(pkg);
@@ -223,6 +267,8 @@ clib_package_new(const char *json, int verbose) {
 
   clib_package_t *pkg = malloc(sizeof(clib_package_t));
   if (!pkg) return NULL;
+
+  memset(pkg, '\0', sizeof(clib_package_t));
 
   JSON_Value *root = json_parse_string(json);
   if (!root) {
@@ -294,62 +340,73 @@ clib_package_new(const char *json, int verbose) {
  */
 
 clib_package_t *
-clib_package_new_from_slug(const char *_slug, int verbose) {
-  if (!_slug) return NULL;
+clib_package_new_from_slug(const char *slug, int verbose) {
+  char *author = NULL;
+  char *name = NULL;
+  char *version = NULL;
+  char *url = NULL;
+  char *json_url = NULL;
+  char *repo = NULL;
+  http_get_response_t *res = NULL;
+  clib_package_t *pkg = NULL;
 
-  // sanitize `_slug`
+  // parse chunks
+  if (!slug) goto error;
+  if (!(author = parse_repo_owner(slug))) goto error;
+  if (!(name = parse_repo_name(slug))) goto error;
+  if (!(version = parse_repo_version(slug))) goto error;
+  if (!(url = clib_package_url(author, name, version))) goto error;
+  if (!(json_url = clib_package_file_url(url, "package.json"))) goto error;
+  if (!(repo = clib_package_repo(author, name))) goto error;
 
-  char *author = clib_package_parse_author(_slug);
-  if (!author) return NULL;
-
-  char *name = clib_package_parse_name(_slug);
-  if (!name) return NULL;
-
-  char *version = clib_package_parse_version(_slug);
-  if (!version) return NULL;
-
-  char *url = clib_package_url(author, name, version);
-  if (!url) return NULL;
-
-  char *json_url = clib_package_file_url(url, "package.json");
-  if (!json_url) {
-    free(url);
-    return NULL;
-  }
-
+  // fetch json
   if (verbose) clib_package_log("fetch", json_url);
-  http_get_response_t *res = http_get(json_url);
+  res = http_get(json_url);
   if (!res || !res->ok) {
     clib_package_error("error", "unable to fetch %s", json_url);
-    free(url);
-    return NULL;
+    goto error;
   }
 
-  clib_package_t *pkg = clib_package_new(res->data, verbose);
-  if (pkg) {
-
-    // force version
-    if (NULL == pkg->version || 0 != strcmp(version, pkg->version))
-      pkg->version = version;
-
-    // force author
-    if (NULL == pkg->author || 0 == strcmp(author, pkg->author))
-      pkg->author = author;
-
-    // force repo
-    char *repo = clib_package_repo(author, name);
-    if (NULL == pkg->repo || 0 != strcmp(repo, pkg->repo)) {
-      pkg->repo = repo;
-    } else {
-      free(repo);
-    }
-
-    pkg->url = url;
-  }
-
+  // build package
+  pkg = clib_package_new(res->data, verbose);
   http_get_free(res);
+  res = NULL;
+  if (!pkg) goto error;
 
+  // force version number
+  if (NULL == pkg->version || 0 != strcmp(version, pkg->version)) {
+    pkg->version = version;
+  } else {
+    free(version);
+  }
+
+  // force package author (don't know how this could fail)
+  if (NULL == pkg->author || 0 != strcmp(author, pkg->author)) {
+    pkg->author = author;
+  } else {
+    free(author);
+  }
+
+  // force package repo (some people are too cool to use a "repo" property)
+  if (NULL == pkg->repo || 0 != strcmp(repo, pkg->repo)) {
+    pkg->repo = repo;
+  } else {
+    free(repo);
+  }
+
+  pkg->url = url;
   return pkg;
+
+error:
+  if (author) free(author);
+  if (name) free(name);
+  if (version) free(version);
+  if (url) free(url);
+  if (json_url) free(json_url);
+  if (repo) free(repo);
+  if (res) http_get_free(res);
+  if (pkg) clib_package_free(pkg);
+  return NULL;
 }
 
 /**
@@ -369,10 +426,11 @@ clib_package_url(const char *author, const char *name, const char *version) {
     + 1 // \0
     ;
 
-  char *slug = malloc(size * sizeof(char));
-  if (!slug) return NULL;
-
-  sprintf(slug, "https://raw.github.com/%s/%s/%s", author, name, version);
+  char *slug = malloc(size);
+  if (slug) {
+    memset(slug, '\0', size);
+    sprintf(slug, "https://raw.github.com/%s/%s/%s", author, name, version);
+  }
   return slug;
 }
 
@@ -382,26 +440,7 @@ clib_package_url(const char *author, const char *name, const char *version) {
 
 char *
 clib_package_parse_author(const char *slug) {
-  char *copy;
-  if (!slug || !(copy = str_copy(slug))) return NULL;
-
-  // if missing /, author = clibs
-  char *name = strstr(copy, "/");
-  if (!name) {
-    free(copy);
-    return CLIB_PACKAGE_DEFAULT_AUTHOR;
-  }
-
-  int delta = name - copy;
-  char *author;
-  if (!delta || !(author = malloc(delta * sizeof(char)))) {
-    free(copy);
-    return NULL;
-  }
-
-  author = substr(copy, 0, delta);
-  free(copy);
-  return author;
+  return parse_repo_owner(slug);
 }
 
 /**
@@ -410,14 +449,7 @@ clib_package_parse_author(const char *slug) {
 
 char *
 clib_package_parse_version(const char *slug) {
-  if (!slug) return NULL;
-
-  char *version = strstr(slug, "@");
-  if (NULL == version) return CLIB_PACKAGE_DEFAULT_VERSION;
-  version++;
-  return 0 == strcmp("*", version)
-    ? CLIB_PACKAGE_DEFAULT_VERSION
-    : version;
+  return parse_repo_version(slug);
 }
 
 /**
@@ -426,29 +458,7 @@ clib_package_parse_version(const char *slug) {
 
 char *
 clib_package_parse_name(const char *slug) {
-  char *copy;
-  if (!slug || !(copy = str_copy(slug))) return NULL;
-
-  char *version = strstr(copy, "@");
-  if (version) {
-    // remove version from slug
-    copy = substr(copy, 0, version - copy);
-  }
-
-  char *name = strstr(copy, "/");
-  if (!name) {
-    // missing author (name@version or just name)
-    return copy;
-  }
-
-  // missing name (author/@version)
-  name++;
-  if (0 == strlen(name)) {
-    free(copy);
-    return NULL;
-  }
-
-  return name;
+  return parse_repo_name(slug);
 }
 
 /**
@@ -465,7 +475,7 @@ clib_package_dependency_new(const char *repo, const char *version) {
   }
 
   dep->version = 0 == strcmp("*", version)
-    ? CLIB_PACKAGE_DEFAULT_VERSION
+    ? str_copy(DEFAULT_REPO_VERSION)
     : str_copy(version);
   dep->name = clib_package_parse_name(repo);
   dep->author = clib_package_parse_author(repo);
@@ -582,8 +592,26 @@ clib_package_install_development(clib_package_t *pkg, const char *dir, int verbo
 
 void
 clib_package_free(clib_package_t *pkg) {
+  if (pkg->name) free(pkg->name);
+  if (pkg->author) free(pkg->author);
+  if (pkg->repo) free(pkg->repo);
+  if (pkg->repo_name) free(pkg->repo_name);
+  if (pkg->description) free(pkg->description);
+  if (pkg->license) free(pkg->license);
+  if (pkg->install) free(pkg->install);
+  if (pkg->json) free(pkg->json);
+  if (pkg->url) free(pkg->url);
   if (pkg->src) list_destroy(pkg->src);
   if (pkg->dependencies) list_destroy(pkg->dependencies);
   if (pkg->development) list_destroy(pkg->development);
   free(pkg);
+}
+
+static void
+clib_package_dependency_free(void *_dep) {
+  clib_package_dependency_t *dep = (clib_package_dependency_t *) _dep;
+  if (dep->name) free(dep->name);
+  if (dep->author) free(dep->author);
+  if (dep->version) free(dep->version);
+  free(dep);
 }

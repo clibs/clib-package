@@ -4,6 +4,8 @@ SRC     = $(wildcard src/*.c)
 SRC    += $(wildcard deps/*/*.c)
 TESTS   = $(wildcard test/*.c)
 CFLAGS  = -std=c99 -Wall -Isrc -Ideps
+CFLAGS += -DDEFAULT_REPO_OWNER=\"clibs\"
+CFLAGS += -DDEFAULT_REPO_VERSION=\"master\"
 LDFLAGS = -lcurl
 
 test: $(TESTS)
