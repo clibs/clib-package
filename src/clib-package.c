@@ -59,9 +59,6 @@ parse_package_deps(JSON_Object *);
 static inline int
 install_packages(list_t *, const char *, int);
 
-static void
-clib_package_dependency_free(void *);
-
 
 /**
  * Create a copy of the result of a `json_object_get_string`
@@ -666,7 +663,7 @@ clib_package_free(clib_package_t *pkg) {
   free(pkg);
 }
 
-static void
+void
 clib_package_dependency_free(void *_dep) {
   clib_package_dependency_t *dep = (clib_package_dependency_t *) _dep;
   if (dep->name) free(dep->name);

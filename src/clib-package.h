@@ -66,4 +66,7 @@ clib_package_install_development(clib_package_t *, const char *, int);
 void
 clib_package_free(clib_package_t *);
 
+void
+clib_package_dependency_free(void *);
+
 #endif

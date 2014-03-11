@@ -15,14 +15,14 @@ describe("clib_package_dependency_new", {
     assert_str_equal("foo", dep->author);
     assert_str_equal("bar", dep->name);
     assert_str_equal("1.2.3", dep->version);
-    free(dep);
+    clib_package_dependency_free(dep);
   });
 
   it("should transform \"*\" to \"master\"", {
     clib_package_dependency_t *dep = clib_package_dependency_new("foo/bar", "*");
     assert(dep);
     assert_str_equal("master", dep->version);
-    free(dep);
+    clib_package_dependency_free(dep);
   });
 
   it("should default to \"clibs\" when no repo author is given", {
@@ -30,6 +30,6 @@ describe("clib_package_dependency_new", {
     assert(dep);
     assert_str_equal("clibs", dep->author);
     assert_str_equal("master", dep->version);
-    free(dep);
+    clib_package_dependency_free(dep);
   });
 });
