@@ -285,76 +285,79 @@ cleanup:
 
 clib_package_t *
 clib_package_new(const char *json, int verbose) {
-  if (!json) return NULL;
+  clib_package_t *pkg = NULL;
+  JSON_Value *root = NULL;
+  JSON_Object *json_object = NULL;
+  JSON_Array *src = NULL;
+  JSON_Object *deps = NULL;
+  JSON_Object *devs = NULL;
+  int error = 1;
 
-  clib_package_t *pkg = malloc(sizeof(clib_package_t));
-  if (!pkg) return NULL;
-
+  if (!json) goto cleanup;
+  if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
   memset(pkg, '\0', sizeof(clib_package_t));
 
-  JSON_Value *root = json_parse_string(json);
-  if (!root) {
-    clib_package_free(pkg);
-    return NULL;
-  }
-
-  JSON_Object *json_object = json_value_get_object(root);
-  if (!json_object) {
-    if (verbose) clib_package_error("error", "unable to parse json");
-    json_value_free(root);
-    clib_package_free(pkg);
-    return NULL;
+  if (!(root = json_parse_string(json))) goto cleanup;
+  if (!(json_object = json_value_get_object(root))) {
+    clib_package_error("error", "unable to parse json");
+    goto cleanup;
   }
 
   pkg->json = str_copy(json);
   pkg->name = json_object_get_string_safe(json_object, "name");
-
-  pkg->repo = NULL;
   pkg->repo = json_object_get_string_safe(json_object, "repo");
-  if (NULL != pkg->repo) {
-    pkg->author = clib_package_parse_author(pkg->repo);
-    // repo name may not be the package's name.  for example:
-    //   stephenmathieson/str-replace.c -> str-replace
-    pkg->repo_name = clib_package_parse_name(pkg->repo);
-    // TODO support npm-style "repository"?
+  pkg->version = json_object_get_string_safe(json_object, "version");
+  pkg->license = json_object_get_string_safe(json_object, "license");
+  pkg->description = json_object_get_string_safe(json_object, "description");
+  pkg->install = json_object_get_string_safe(json_object, "install");
+
+  // TODO npm-style "repository" (thlorenz/gumbo-parser.c#1)
+  if (pkg->repo) {
+    pkg->author = parse_repo_owner(pkg->repo);
+    // repo name may not be package name (thing.c -> thing)
+    pkg->repo_name = parse_repo_name(pkg->repo);
   } else {
     if (verbose) clib_package_warn("warning", "missing repo in package.json");
     pkg->author = NULL;
     pkg->repo_name = NULL;
   }
 
-  pkg->version = json_object_get_string_safe(json_object, "version");
-  pkg->license = json_object_get_string_safe(json_object, "license");
-  pkg->description = json_object_get_string_safe(json_object, "description");
-  pkg->install = json_object_get_string_safe(json_object, "install");
-
-  JSON_Array *src = json_object_get_array(json_object, "src");
-  if (src) {
-    pkg->src = list_new();
-    if (!pkg->src) {
-      json_value_free(root);
-      clib_package_free(pkg);
-      return NULL;
-    }
+  if ((src = json_object_get_array(json_object, "src"))) {
+    if (!(pkg->src = list_new())) goto cleanup;
     pkg->src->free = free;
-
-    for (size_t i = 0; i < json_array_get_count(src); i++) {
+    for (unsigned int i = 0; i < json_array_get_count(src); i++) {
       char *file = json_array_get_string_safe(src, i);
-      if (!file) break; // TODO fail?
-      list_node_t *node = list_node_new(file);
-      list_rpush(pkg->src, node);
+      if (!file) goto cleanup;
+      if (!(list_rpush(pkg->src, list_node_new(file)))) goto cleanup;
     }
   } else {
     pkg->src = NULL;
   }
 
-  JSON_Object *deps = json_object_get_object(json_object, "dependencies");
-  pkg->dependencies = parse_package_deps(deps);
+  if ((deps = json_object_get_object(json_object, "dependencies"))) {
+    if (!(pkg->dependencies = parse_package_deps(deps))) {
+      goto cleanup;
+    }
+  } else {
+    pkg->dependencies = NULL;
+  }
 
-  JSON_Object *devs = json_object_get_object(json_object, "development");
-  pkg->development = parse_package_deps(devs);
+  if ((devs = json_object_get_object(json_object, "development"))) {
+    if (!(pkg->development = parse_package_deps(devs))) {
+      goto cleanup;
+    }
+  } else {
+    pkg->development = NULL;
+  }
 
-  json_value_free(root);
+  error = 0;
+
+cleanup:
+  if (root) json_value_free(root);
+  if (error && pkg) {
+    clib_package_free(pkg);
+    pkg = NULL;
+  }
   return pkg;
 }
 
