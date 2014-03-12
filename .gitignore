@@ -11,3 +11,4 @@ test/package-url
 example
 test/package-install-dev-dependencies
 deps
+*.o

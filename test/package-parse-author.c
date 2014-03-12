@@ -5,6 +5,8 @@
 
 
 describe("clib_package_parse_author", {
+  char *author = NULL;
+
   it("should return NULL when given a bad slug", {
     assert(NULL == clib_package_parse_author(NULL));
   });
@@ -16,16 +18,24 @@ describe("clib_package_parse_author", {
   });
 
   it("should default to \"clibs\"", {
-    assert_str_equal("clibs", clib_package_parse_author("foo"));
+    author = clib_package_parse_author("foo");
+    assert_str_equal("clibs", author);
+    free(author);
   });
 
   it("should support \"author/name\"-style slugs", {
-    assert_str_equal("author", clib_package_parse_author("author/name"));
+    author = clib_package_parse_author("author/name");
+    assert_str_equal("author", author);
+    free(author);
   });
 
   it("should support \"author/name@version\"-slugs slugs", {
-    assert_str_equal("author", clib_package_parse_author("author/name@master"));
-    assert_str_equal("author", clib_package_parse_author("author/name@*"));
+    author = clib_package_parse_author("author/name@master");
+    assert_str_equal("author", author);
+    free(author);
+    author = clib_package_parse_author("author/name@*");
+    assert_str_equal("author", author);
+    free(author);
   });
 
   // this was a bug in parse-repo.c...
@@ -34,13 +44,11 @@ describe("clib_package_parse_author", {
     assert(slug);
     strcpy(slug, "author/name@version");
 
-    char *author = clib_package_parse_author(slug);
+    author = clib_package_parse_author(slug);
 
     assert_str_equal("author", author);
     free(slug);
-
     assert_str_equal("author", author);
-
     free(author);
   });
 });

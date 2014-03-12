@@ -3,36 +3,69 @@
 #include "clib-package.h"
 
 describe("clib_package_parse_version", {
+  char *version = NULL;
+
   it("should return NULL when given a bad slug", {
     assert(NULL == clib_package_parse_version(NULL));
+    assert(NULL == clib_package_parse_version(""));
   });
 
   it("should default to \"master\"", {
-    assert_str_equal("master", clib_package_parse_version(""));
-    assert_str_equal("master", clib_package_parse_version("foo"));
-    assert_str_equal("master", clib_package_parse_version("foo/bar"));
+    version = clib_package_parse_version("foo");
+    assert_str_equal("master", version);
+    free(version);
+
+    version = clib_package_parse_version("foo/bar");
+    assert_str_equal("master", version);
+    free(version);
   });
 
   it("should transform \"*\" to \"master\"", {
-    assert_str_equal("master", clib_package_parse_version("*"));
-    assert_str_equal("master", clib_package_parse_version("foo@*"));
-    assert_str_equal("master", clib_package_parse_version("foo/bar@*"));
+    version = clib_package_parse_version("*");
+    assert_str_equal("master", version);
+    free(version);
+
+    version = clib_package_parse_version("foo@*");
+    assert_str_equal("master", version);
+    free(version);
+
+    version = clib_package_parse_version("foo/bar@*");
+    assert_str_equal("master", version);
+    free(version);
   });
 
   it("should support \"name\"-style slugs", {
-    assert_str_equal("master", clib_package_parse_version("foo"));
+    version = clib_package_parse_version("foo");
+    assert_str_equal("master", version);
+    free(version);
   });
 
   it("should support \"name@version\"-style slugs", {
-    assert_str_equal("bar", clib_package_parse_version("foo@bar"));
-    assert_str_equal("master", clib_package_parse_version("foo@*"));
-    assert_str_equal("1.2.3", clib_package_parse_version("foo@1.2.3"));
+    version = clib_package_parse_version("foo@bar");
+    assert_str_equal("bar", version);
+    free(version);
+
+    version = clib_package_parse_version("foo@*");
+    assert_str_equal("master", version);
+    free(version);
+
+    version = clib_package_parse_version("foo@1.2.3");
+    assert_str_equal("1.2.3", version);
+    free(version);
   });
 
   it("should support \"author/name@version\"-style slugs", {
-    assert_str_equal("baz", clib_package_parse_version("foo/bar@baz"));
-    assert_str_equal("master", clib_package_parse_version("foo/bar@*"));
-    assert_str_equal("1.2.3", clib_package_parse_version("foo/bar@1.2.3"));
+    version = clib_package_parse_version("foo/bar@baz");
+    assert_str_equal("baz", version);
+    free(version);
+
+    version = clib_package_parse_version("foo/bar@*");
+    assert_str_equal("master", version);
+    free(version);
+
+    version = clib_package_parse_version("foo/bar@1.2.3");
+    assert_str_equal("1.2.3", version);
+    free(version);
   });
 
   // this was a bug in parse-repo.c...
@@ -41,11 +74,13 @@ describe("clib_package_parse_version", {
     assert(slug);
     strcpy(slug, "author/name@version");
 
-    char *version = clib_package_parse_version(slug);
+    version = clib_package_parse_version(slug);
 
     assert_str_equal("version", version);
     free(slug);
 
     assert_str_equal("version", version);
+
+    free(version);
   });
 });
