@@ -1,4 +1,10 @@
 
+0.2.1 / 2014-03-17
+==================
+
+ * Set `iterator` to NULL after freeing it (fixes #1)
+ * build: Clean should remove fixtures
+
 0.2.0 / 2014-03-13
 ==================
 
