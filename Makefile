@@ -28,5 +28,6 @@ example: example.c $(OBJS)
 clean:
 	$(foreach t, $(TESTS), rm -f $(basename $(t));)
 	rm -f example $(OBJS)
+	rm -rf test/fixtures
 
 .PHONY: test $(TESTS) clean grind
