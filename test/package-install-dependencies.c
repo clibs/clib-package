@@ -60,4 +60,29 @@ describe("clib_package_install_dependencies", {
     clib_package_free(pkg);
     rimraf("./test/fixtures");
   });
+
+  it("should handle unresolved packages", {
+    char json[] =
+      "{"
+      "  \"dependencies\": {"
+      "    \"linenoise\": \"*\","
+      "    \"stephenmathieson/substr.c\": \"*\","
+      "    \"stephenmathieson/emtter.c\": \"*\""
+      "  }"
+      "}";
+
+    clib_package_t *pkg = clib_package_new(json, 0);
+    assert(pkg);
+
+    int r = clib_package_install_dependencies(pkg, "./test/fixtures/", 0);
+    // should fail
+    assert(-1 == r);
+
+    assert(0 == fs_exists("./test/fixtures/linenoise/package.json"));
+    assert(0 == fs_exists("./test/fixtures/substr/package.json"));
+    assert(-1 == fs_exists("./test/fixtures/emtter/"));
+
+    clib_package_free(pkg);
+    rimraf("./test/fixtures");
+  });
 });
