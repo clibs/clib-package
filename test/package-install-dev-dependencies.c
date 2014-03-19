@@ -23,8 +23,11 @@ describe("clib_package_install_development", {
     assert(0 == clib_package_install_development(pkg, "./test/fixtures", 0));
     assert(0 == fs_exists("./test/fixtures/describe"));
     assert(0 == fs_exists("./test/fixtures/describe/describe.h"));
-    assert(0 == fs_exists("./test/fixtures/describe/assertion-macros.h"));
     assert(0 == fs_exists("./test/fixtures/describe/package.json"));
+    assert(0 == fs_exists(
+      "./test/fixtures/assertion-macros/assertion-macros.h"
+    ));
+    assert(0 == fs_exists("./test/fixtures/assertion-macros/package.json"));
     rimraf("./test/fixtures");
     clib_package_free(pkg);
   });
