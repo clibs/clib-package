@@ -1,4 +1,10 @@
 
+0.2.2 / 2014-03-19
+==================
+
+ * Use clibs/logger for all output
+ * test: Fix failing development test
+
 0.2.1 / 2014-03-17
 ==================
 
