@@ -3,7 +3,7 @@
 ==================
 
  * Change default endpoint to raw.githubusercontent.com
- * Add support for installing makefiles (clibs/clib#22)
+ * Add support for installing makefiles ([clibs/clib#22](https://github.com/clibs/clib/issues/22))
 
 0.2.3 / 2014-05-16
 ==================
