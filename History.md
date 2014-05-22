@@ -1,4 +1,10 @@
 
+0.2.4 / 2014-05-22
+==================
+
+ * Change default endpoint to raw.githubusercontent.com
+ * Add support for installing makefiles (clibs/clib#22)
+
 0.2.3 / 2014-05-16
 ==================
 
