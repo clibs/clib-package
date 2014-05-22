@@ -422,7 +422,7 @@ char *
 clib_package_url(const char *author, const char *name, const char *version) {
   if (!author || !name || !version) return NULL;
   int size =
-      33 // https://raw.githubusercontent.com/
+      34 // https://raw.githubusercontent.com/
     + strlen(author)
     + 1 // /
     + strlen(name)
