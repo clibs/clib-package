@@ -17,7 +17,7 @@ describe("clib_package_url", {
 
   it("should build a GitHub url", {
     char *url = clib_package_url("author", "name", "version");
-    assert_str_equal("https://raw.github.com/author/name/version", url);
+    assert_str_equal("https://raw.githubusercontent.com/author/name/version", url);
     free(url);
   });
 });
