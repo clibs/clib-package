@@ -1,4 +1,10 @@
 
+0.2.5 / 2014-06-26
+==================
+
+ * package.json: Update jwerle/fs.c to 0.1.1
+ * history: Fix formatting
+
 0.2.4 / 2014-05-22
 ==================
 
