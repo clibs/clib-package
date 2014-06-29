@@ -1,4 +1,10 @@
 
+0.2.7 / 2014-06-29
+==================
+
+ * package.json: Update deps to remove str-copy
+ * package.json: Replace str-copy.c with clibs/strdup
+
 0.2.6 / 2014-06-27
 ==================
 
