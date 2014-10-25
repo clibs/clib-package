@@ -1,4 +1,10 @@
 
+0.2.8 / 2014-10-24
+==================
+
+  * package: Update http-get and mkdirp
+  * src: Remove unnecessary null checks
+
 0.2.7 / 2014-06-29
 ==================
 
