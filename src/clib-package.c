@@ -387,11 +387,7 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   // force version number
   if (pkg->version) {
     if (0 != strcmp(version, pkg->version)) {
-      debug(&debugger
-        , "forcing version number: %s (%s)"
-        , version
-        , pkg->version
-      );
+      _debug("forcing version number: %s (%s)", version, pkg->version);
       free(pkg->version);
       pkg->version = version;
     } else {
