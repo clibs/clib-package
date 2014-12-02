@@ -1,4 +1,12 @@
 
+0.3.0 / 2014-12-01
+==================
+
+  * src: Cleanup logs
+  * travis: Update before installing deps
+  * src: Fix debug()
+  * src: Add debug()s
+
 0.2.8 / 2014-10-24
 ==================
 
