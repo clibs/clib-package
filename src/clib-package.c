@@ -364,12 +364,12 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   _debug("version: %s", version);
 
   // fetch json
-  if (verbose) logger_info("fetch", json_url);
+  if (verbose) logger_info("fetch", "%s/%s:package.json", author, name);
   _debug("GET %s", json_url);
   res = http_get(json_url);
   _debug("status: %d", res->status);
   if (!res || !res->ok) {
-    logger_error("error", "unable to fetch %s", json_url);
+    logger_error("error", "unable to fetch %s/%s:package.json", author, name);
     goto error;
   }
 
@@ -543,10 +543,10 @@ fetch_package_file(
     goto cleanup;
   }
 
-  if (verbose) logger_info("fetch", url);
+  if (verbose) logger_info("fetch", "%s:%s", pkg->repo, file);
 
   if (-1 == http_get_file(url, path)) {
-    logger_error("error", "unable to fetch %s", url);
+    logger_error("error", "unable to fetch %s:%s", pkg->repo, file);
     rc = 1;
     goto cleanup;
   }
