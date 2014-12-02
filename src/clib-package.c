@@ -32,11 +32,11 @@
 #define DEFAULT_REPO_OWNER "clibs"
 #endif
 
-debug_t debugger;
+debug_t _debugger;
 
 #define _debug(...) ({                                         \
-  if (!(debugger.name)) debug_init(&debugger, "clib-package"); \
-  debug(&debugger, __VA_ARGS__);                               \
+  if (!(_debugger.name)) debug_init(&_debugger, "clib-package"); \
+  debug(&_debugger, __VA_ARGS__);                               \
 })
 
 /**
