@@ -28,9 +28,16 @@ describe("clib_package_new_from_slug", {
   });
 
   it("should force package version numbers", {
+    clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c@0.0.1", 0);
+    assert(pkg);
+    assert_str_equal("0.0.1", pkg->version);
+    clib_package_free(pkg);
+  });
+
+  it("should use package version if version not provided", {
     clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/mkdirp.c", 0);
     assert(pkg);
-    assert_str_equal("master", pkg->version);
+    assert_str_equal("0.1.5", pkg->version);
     clib_package_free(pkg);
   });
 
