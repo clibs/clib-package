@@ -1,4 +1,10 @@
 
+0.4.0 / 2016-01-10
+==================
+
+  * src: fix whitespace
+  * src: use `package.json` repo for installs (#6, @willemt)
+
 0.3.1 / 2014-12-01
 ==================
 
