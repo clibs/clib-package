@@ -5,4 +5,4 @@ before_install:
   - git clone https://github.com/clibs/clib.git /tmp/clib
   - sudo make -C /tmp/clib install
 install: clib install --dev
-script: make valgrind
+script: make test
