@@ -8,8 +8,7 @@ DEPS += $(wildcard deps/*/*.c)
 OBJS = $(SRC:.c=.o) $(DEPS:.c=.o)
 TEST_SRC = $(wildcard test/*.c)
 TEST_OBJ = $(TEST_SRC:.c=.o)
-# TEST_BIN = $(TEST_SRC:.c=)
-TEST_BIN = test/package-url
+TEST_BIN = $(TEST_SRC:.c=)
 
 CFLAGS = -std=c99 -Wall -Isrc -Ideps
 LDFLAGS = -lcurl
