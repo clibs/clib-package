@@ -1,33 +1,37 @@
 
 CC ?= cc
 VALGRIND ?= valgrind
+TEST_RUNNER ?=
+
 SRC = $(wildcard src/*.c)
-SRC += $(wildcard deps/*/*.c)
-OBJS = $(SRC:.c=.o)
-TESTS = $(wildcard test/*.c)
+DEPS += $(wildcard deps/*/*.c)
+OBJS = $(SRC:.c=.o) $(DEPS:.c=.o)
+TEST_SRC = $(wildcard test/*.c)
+TEST_OBJ = $(TEST_SRC:.c=.o)
+# TEST_BIN = $(TEST_SRC:.c=)
+TEST_BIN = test/package-url
+
 CFLAGS = -std=c99 -Wall -Isrc -Ideps
 LDFLAGS = -lcurl
-VALGRIND_OPTS ?= --leak-check=full
+VALGRIND_OPTS ?= --leak-check=full --error-exitcode=3
 
-test: $(TESTS)
+.DEFAULT_GOAL := test
 
-$(TESTS): $(OBJS)
-	@$(CC) $(CFLAGS) -o $(basename $@) $@ $(OBJS) $(LDFLAGS)
-	@$(TEST_RUNNER) ./$(basename $@)
+test: $(TEST_BIN)
+	$(foreach t, $^, $(TEST_RUNNER) ./$(t) || exit 1;)
 
-grind:
-	@TEST_RUNNER="$(VALGRIND) $(VALGRIND_OPTS)" \
-		$(MAKE) test
+valgrind: TEST_RUNNER=$(VALGRIND) $(VALGRIND_OPTS)
+valgrind: test
 
-%.o: %.c
-	$(CC) $< -c -o $@ $(CFLAGS)
+example: example.o $(OBJS)
 
-example: example.c $(OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+test/%: test/%.o $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
-	$(foreach t, $(TESTS), rm -f $(basename $(t));)
-	rm -f example $(OBJS)
+	rm -f $(OBJS)
+	rm -f $(TEST_OBJ)
+	rm -f $(TEST_BIN)
 	rm -rf test/fixtures
 
-.PHONY: test $(TESTS) clean grind
+.PHONY: test valgrind clean
