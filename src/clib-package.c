@@ -565,6 +565,8 @@ fetch_package_file(
     return 1;
   }
 
+  _debug("file URL: %s", url);
+
   if (!(path = path_join(dir, basename(file)))) {
     rc = 1;
     goto cleanup;
