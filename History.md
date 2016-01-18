@@ -1,4 +1,16 @@
 
+0.4.1 / 2016-01-17
+==================
+
+  * src: add "file URL" debug()
+  * package: fix `repo`
+  * travis: disable valgrind for now
+  * Makefile: fix `test`
+  * travis: install and run valgrind
+  * Makefile: cleanup/refactor
+  * test: refactor to use describe@2 syntax
+  * package: update `describe.h` to 2.0.1
+
 0.4.0 / 2016-01-10
 ==================
 
