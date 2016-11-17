@@ -4,7 +4,7 @@ VALGRIND ?= valgrind
 TEST_RUNNER ?=
 
 SRC = $(wildcard src/*.c)
-DEPS += $(wildcard deps/*/*.c)
+DEPS += $(filter-out deps/clib-package/clib-package.c, $(wildcard deps/*/*.c))
 OBJS = $(SRC:.c=.o) $(DEPS:.c=.o)
 TEST_SRC = $(wildcard test/*.c)
 TEST_OBJ = $(TEST_SRC:.c=.o)
