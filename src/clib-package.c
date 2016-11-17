@@ -21,8 +21,8 @@
 #include "logger/logger.h"
 #include "parse-repo/parse-repo.h"
 #include "debug/debug.h"
-
 #include "clib-package.h"
+#include "clib-cache/cache.h"
 
 #ifndef DEFAULT_REPO_VERSION
 #define DEFAULT_REPO_VERSION "master"
@@ -40,6 +40,10 @@ debug_t _debugger;
   if (!(_debugger.name)) debug_init(&_debugger, "clib-package"); \
   debug(&_debugger, __VA_ARGS__);                               \
 })
+
+static clib_package_opts_t opts = {
+   .skip_cache = 0
+};
 
 /**
  * Pre-declare prototypes.
@@ -66,6 +70,11 @@ parse_package_deps(JSON_Object *);
 static inline int
 install_packages(list_t *, const char *, int);
 
+
+void
+clib_package_set_opts(clib_package_opts_t o) {
+  opts.skip_cache = o.skip_cache;
+}
 
 /**
  * Create a copy of the result of a `json_object_get_string`
@@ -348,6 +357,8 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   char *url = NULL;
   char *json_url = NULL;
   char *repo = NULL;
+  char *json = NULL;
+  char *log = NULL;
   http_get_response_t *res = NULL;
   clib_package_t *pkg = NULL;
 
@@ -365,14 +376,30 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   _debug("version: %s", version);
 
   // fetch json
-  if (verbose) logger_info("fetch", "%s/%s:package.json", author, name);
-  _debug("GET %s", json_url);
-  res = http_get(json_url);
-  _debug("status: %d", res->status);
-  if (!res || !res->ok) {
-    logger_error("error", "unable to fetch %s/%s:package.json", author, name);
-    goto error;
+  if (clib_cache_has_json(author, name, version)) {
+    if (opts.skip_cache) {
+      clib_cache_delete_json(author, name, version);
+      goto download;
+    }
+    json = clib_cache_read_json(author, name, version);
+    if (!json){
+      goto download;
+    }
+    log = "cache";
+  } else {
+    download:
+      _debug("GET %s", json_url);
+      res = http_get(json_url);
+      json = res->data;
+      _debug("status: %d", res->status);
+      if (!res || !res->ok) {
+        logger_error("error", "unable to fetch %s/%s:package.json", author, name);
+        goto error;
+      }
+      clib_cache_save_json(author, name, version, json);
+      log = "fetch";
   }
+  if (verbose) logger_info(log, "%s/%s:package.json", author, name);
 
   free(json_url);
   json_url = NULL;
@@ -380,8 +407,13 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   name = NULL;
 
   // build package
-  pkg = clib_package_new(res->data, verbose);
-  http_get_free(res);
+  pkg = clib_package_new(json, verbose);
+  if (res) {
+    http_get_free(res);
+  } else {
+    free(json);
+  }
+
   res = NULL;
   if (!pkg) goto error;
 
@@ -632,16 +664,30 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   // if no sources are listed, just install
   if (NULL == pkg->src) goto install;
 
-  iterator = list_iterator_new(pkg->src, LIST_HEAD);
-  list_node_t *source;
-  while ((source = list_iterator_next(iterator))) {
-    if (0 != fetch_package_file(pkg, pkg_dir, source->val, verbose)) {
-      list_iterator_destroy(iterator);
-      iterator = NULL;
-      rc = -1;
-      goto cleanup;
+  if (clib_cache_has_package(pkg)) {
+    if (opts.skip_cache){
+        clib_cache_delete_package(pkg);
+        goto download;
     }
+    if (0 != clib_cache_load_package(pkg, pkg_dir)){
+      goto download;
+    }
+    logger_info("cache", pkg->repo);
+    goto install;
   }
+  download:
+    iterator = list_iterator_new(pkg->src, LIST_HEAD);
+    list_node_t *source;
+
+    while ((source = list_iterator_next(iterator))) {
+      if (0 != fetch_package_file(pkg, pkg_dir, source->val, verbose)) {
+        list_iterator_destroy(iterator);
+        iterator = NULL;
+        rc = -1;
+        goto cleanup;
+      }
+    }
+    clib_cache_save_package(pkg, pkg_dir);
 
 install:
   rc = clib_package_install_dependencies(pkg, dir, verbose);
