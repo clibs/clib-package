@@ -226,6 +226,10 @@ install_packages(list_t *list, const char *dir, int verbose) {
 
     dep = (clib_package_dependency_t *) node->val;
     slug = clib_package_slug(dep->author, dep->name, dep->version);
+    if (0 == strcmp(dep->name, "clib-package")){
+        free(slug);
+        continue;
+    }
     if (NULL == slug) goto loop_cleanup;
 
     pkg = clib_package_new_from_slug(slug, verbose);
