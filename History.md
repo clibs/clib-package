@@ -1,3 +1,8 @@
+0.5.0 / 2016-10-17
+==================
+
+  * integrated [clib-cache](https://github.com/clibs/clib-cache) for package, and package.json caching
+  * added `clib_package_opts_t` for easier configuration
 
 0.4.2 / 2016-01-17
 ==================
