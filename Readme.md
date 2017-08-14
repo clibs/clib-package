@@ -3,13 +3,13 @@
 
   Internal bits of clib-install(1) for fetching packages.
 
-[![Build Status](https://travis-ci.org/stephenmathieson/clib-package.png?branch=master)](https://travis-ci.org/stephenmathieson/clib-package)
+[![Build Status](https://travis-ci.org/clibs/clib-package.png?branch=master)](https://travis-ci.org/clibs/clib-package)
 
 ## Installation
 
   Install with [clib(1)](https://github.com/clibs/clib):
 
-    $ clib install stephenmathieson/clib-package
+    $ clib install clibs/clib-package
 
 ## Example
 
@@ -33,7 +33,7 @@ int main(int argc, char const *argv[]) {
 
 ```
 
-For more, see [the tests](https://github.com/stephenmathieson/clib-package/tree/master/test).
+For more, see [the tests](https://github.com/clibs/clib-package/tree/master/test).
 
 ## License
 
