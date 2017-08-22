@@ -664,12 +664,12 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   // if no sources are listed, just install
   if (NULL == pkg->src) goto install;
 
-  if (clib_cache_has_package(pkg)) {
+  if (clib_cache_has_package(pkg->author, pkg->name, pkg->version)) {
     if (opts.skip_cache){
-        clib_cache_delete_package(pkg);
+        clib_cache_delete_package(pkg->author, pkg->name, pkg->version);
         goto download;
     }
-    if (0 != clib_cache_load_package(pkg, pkg_dir)){
+    if (0 != clib_cache_load_package(pkg->author, pkg->name, pkg->version, pkg_dir)){
       goto download;
     }
     logger_info("cache", pkg->repo);
@@ -687,7 +687,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
         goto cleanup;
       }
     }
-    clib_cache_save_package(pkg, pkg_dir);
+    clib_cache_save_package(pkg->author, pkg->name, pkg->version, pkg_dir);
 
 install:
   rc = clib_package_install_dependencies(pkg, dir, verbose);
