@@ -1,4 +1,5 @@
 
+#include <clib-package.h>
 #include "describe/describe.h"
 #include "rimraf/rimraf.h"
 #include "fs/fs.h"
@@ -65,7 +66,7 @@ main() {
     }
 
     it("should install itself") {
-      clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/clib-package", 0);
+      clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/clib-package@0.4.2", 0);
       assert(pkg);
       assert(0 == clib_package_install(pkg, "./test/fixtures/", 0));
       assert(0 == fs_exists("./test/fixtures/"));
