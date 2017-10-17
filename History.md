@@ -1,3 +1,10 @@
+
+0.5.1 / 2017-10-17
+==================
+
+  * Decouple clib-cache from clib-package (#10)
+  * Readme: fix badge
+
 0.5.0 / 2016-10-17
 ==================
 
