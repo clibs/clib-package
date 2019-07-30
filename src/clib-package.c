@@ -36,9 +36,9 @@
 
 debug_t _debugger;
 
-#define _debug(...) ({                                         \
+#define _debug(...) ({                                           \
   if (!(_debugger.name)) debug_init(&_debugger, "clib-package"); \
-  debug(&_debugger, __VA_ARGS__);                               \
+  debug(&_debugger, __VA_ARGS__);                                \
 })
 
 static clib_package_opts_t opts = {
@@ -273,7 +273,7 @@ clib_package_new(const char *json, int verbose) {
     goto cleanup;
   }
   if (!(json_object = json_value_get_object(root))) {
-    logger_error("error", "invalid package.json");
+    logger_error("error", "invalid package.json or clib.json file");
     goto cleanup;
   }
   if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
@@ -297,7 +297,7 @@ clib_package_new(const char *json, int verbose) {
     // repo name may not be package name (thing.c -> thing)
     pkg->repo_name = parse_repo_name(pkg->repo);
   } else {
-    if (verbose) logger_warn("warning", "missing repo in package.json");
+    if (verbose) logger_warn("warning", "missing repo in package.json or clib.json file");
     pkg->author = NULL;
     pkg->repo_name = NULL;
   }
@@ -312,7 +312,7 @@ clib_package_new(const char *json, int verbose) {
       if (!(list_rpush(pkg->src, list_node_new(file)))) goto cleanup;
     }
   } else {
-    _debug("no src files listed in package.json");
+    _debug("no src files listed in package.json or clib.json file");
     pkg->src = NULL;
   }
 
@@ -321,7 +321,7 @@ clib_package_new(const char *json, int verbose) {
       goto cleanup;
     }
   } else {
-    _debug("no dependencies listed in package.json");
+    _debug("no dependencies listed in package.json or clib.json file");
     pkg->dependencies = NULL;
   }
 
@@ -330,7 +330,7 @@ clib_package_new(const char *json, int verbose) {
       goto cleanup;
     }
   } else {
-    _debug("no development dependencies listed in package.json");
+    _debug("no development dependencies listed in package.json or clib.json file");
     pkg->development = NULL;
   }
 
@@ -345,12 +345,8 @@ cleanup:
   return pkg;
 }
 
-/**
- * Create a package from the given repo `slug`
- */
-
-clib_package_t *
-clib_package_new_from_slug(const char *slug, int verbose) {
+static clib_package_t *
+clib_package_new_from_slug_with_package_name(const char *slug, int verbose, const char *file) {
   char *author = NULL;
   char *name = NULL;
   char *version = NULL;
@@ -369,7 +365,7 @@ clib_package_new_from_slug(const char *slug, int verbose) {
   if (!(name = parse_repo_name(slug))) goto error;
   if (!(version = parse_repo_version(slug, DEFAULT_REPO_VERSION))) goto error;
   if (!(url = clib_package_url(author, name, version))) goto error;
-  if (!(json_url = clib_package_file_url(url, "package.json"))) goto error;
+  if (!(json_url = clib_package_file_url(url, file))) goto error;
 
   _debug("author: %s", author);
   _debug("name: %s", name);
@@ -393,13 +389,13 @@ clib_package_new_from_slug(const char *slug, int verbose) {
       json = res->data;
       _debug("status: %d", res->status);
       if (!res || !res->ok) {
-        logger_error("error", "unable to fetch %s/%s:package.json", author, name);
+        logger_warn("warning", "unable to fetch %s/%s:%s", author, name, file);
         goto error;
       }
       clib_cache_save_json(author, name, version, json);
       log = "fetch";
   }
-  if (verbose) logger_info(log, "%s/%s:package.json", author, name);
+  if (verbose) logger_info(log, "%s/%s:%s", author, name, file);
 
   free(json_url);
   json_url = NULL;
@@ -471,6 +467,33 @@ error:
   http_get_free(res);
   if (pkg) clib_package_free(pkg);
   return NULL;
+}
+
+/**
+ * Create a package from the given repo `slug`
+ */
+
+clib_package_t *
+clib_package_new_from_slug(const char *slug, int verbose) {
+  clib_package_t *package = NULL;
+  const char *name = NULL;
+  unsigned int i = 0;
+
+  static const char *package_names[] = {
+    "clib.json",
+    "package.json",
+    NULL
+  };
+
+  do {
+    name = package_names[i];
+    package = clib_package_new_from_slug_with_package_name(slug, verbose, name);
+    if (NULL != package) {
+      package->filename = (char *) name;
+    }
+  } while (NULL != package_names[++i] && NULL == package);
+
+  return package;
 }
 
 /**
@@ -645,8 +668,8 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     if (NULL == pkg->url) goto cleanup;
   }
 
-  // write package.json
-  if (!(package_json = path_join(pkg_dir, "package.json"))) goto cleanup;
+  // write package.json or clib.json
+  if (!(package_json = path_join(pkg_dir, pkg->filename))) goto cleanup;
   _debug("write: %s", package_json);
   if (-1 == fs_write(package_json, pkg->json)) {
     logger_error("error", "Failed to write %s", package_json);

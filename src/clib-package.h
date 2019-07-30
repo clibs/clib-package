@@ -29,6 +29,7 @@ typedef struct {
   char *url;
   char *version;
   char *makefile;
+  char *filename; // `package.json` or `clib.json`
   list_t *dependencies;
   list_t *development;
   list_t *src;
