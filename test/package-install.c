@@ -22,7 +22,7 @@ main() {
       rimraf("./test/fixtures/");
     }
 
-    it("should install the package's package.json or clib.json") {
+    it("should install the package's clib.json or package.json") {
       clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/case.c@0.1.0", 0);
       assert(pkg);
       assert(0 == clib_package_install(pkg, "./test/fixtures/", 0));

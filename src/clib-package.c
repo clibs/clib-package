@@ -273,7 +273,7 @@ clib_package_new(const char *json, int verbose) {
     goto cleanup;
   }
   if (!(json_object = json_value_get_object(root))) {
-    logger_error("error", "invalid package.json or clib.json file");
+    logger_error("error", "invalid clib.json or package.json file");
     goto cleanup;
   }
   if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
@@ -297,7 +297,7 @@ clib_package_new(const char *json, int verbose) {
     // repo name may not be package name (thing.c -> thing)
     pkg->repo_name = parse_repo_name(pkg->repo);
   } else {
-    if (verbose) logger_warn("warning", "missing repo in package.json or clib.json file");
+    if (verbose) logger_warn("warning", "missing repo in clib.json or package.json file");
     pkg->author = NULL;
     pkg->repo_name = NULL;
   }
@@ -312,7 +312,7 @@ clib_package_new(const char *json, int verbose) {
       if (!(list_rpush(pkg->src, list_node_new(file)))) goto cleanup;
     }
   } else {
-    _debug("no src files listed in package.json or clib.json file");
+    _debug("no src files listed in clib.json or package.json file");
     pkg->src = NULL;
   }
 
@@ -321,7 +321,7 @@ clib_package_new(const char *json, int verbose) {
       goto cleanup;
     }
   } else {
-    _debug("no dependencies listed in package.json or clib.json file");
+    _debug("no dependencies listed in clib.json or package.json file");
     pkg->dependencies = NULL;
   }
 
@@ -330,7 +330,7 @@ clib_package_new(const char *json, int verbose) {
       goto cleanup;
     }
   } else {
-    _debug("no development dependencies listed in package.json or clib.json file");
+    _debug("no development dependencies listed in clib.json or package.json file");
     pkg->development = NULL;
   }
 
@@ -668,7 +668,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     if (NULL == pkg->url) goto cleanup;
   }
 
-  // write package.json or clib.json
+  // write clib.json or package.json
   if (!(package_json = path_join(pkg_dir, pkg->filename))) goto cleanup;
   _debug("write: %s", package_json);
   if (-1 == fs_write(package_json, pkg->json)) {
