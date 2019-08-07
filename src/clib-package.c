@@ -20,7 +20,6 @@
 #include "substr/substr.h"
 #include "http-get/http-get.h"
 #include "mkdirp/mkdirp.h"
-#include "fs/fs.h"
 #include "path-join/path-join.h"
 #include "logger/logger.h"
 #include "parse-repo/parse-repo.h"
@@ -66,7 +65,6 @@ static clib_package_lock_t lock = {
   0
 };
 
-static list_t *pending = 0;
 #endif
 
 debug_t _debugger;
