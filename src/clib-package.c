@@ -5,6 +5,11 @@
 // MIT license
 //
 
+
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#include <unistd.h>
+#endif
+
 #include <stdlib.h>
 #include <libgen.h>
 #include <stdarg.h>
@@ -22,6 +27,7 @@
 #include "debug/debug.h"
 #include "clib-package.h"
 #include "clib-cache/cache.h"
+#include "fs/fs.h"
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>
@@ -54,6 +60,13 @@ struct clib_package_lock {
   pthread_mutex_t mutex;
   clib_package_t *pkg;
 };
+
+static clib_package_lock_t lock = {
+  PTHREAD_MUTEX_INITIALIZER,
+  0
+};
+
+static list_t *pending = 0;
 #endif
 
 debug_t _debugger;
@@ -290,6 +303,8 @@ install_packages(list_t *list, const char *dir, int verbose) {
   iterator = list_iterator_new(list, LIST_HEAD);
   if (NULL == iterator) goto cleanup;
 
+  list_t *freelist = list_new();
+
   while ((node = list_iterator_next(iterator))) {
     clib_package_dependency_t *dep = NULL;
     char *slug = NULL;
@@ -305,11 +320,11 @@ install_packages(list_t *list, const char *dir, int verbose) {
 
     if (-1 == clib_package_install(pkg, dir, verbose)) goto loop_cleanup;
 
+    list_rpush(freelist, list_node_new(pkg));
     error = 0;
 
   loop_cleanup:
     if (slug) free(slug);
-    if (pkg) clib_package_free(pkg);
     if (error) {
       list_iterator_destroy(iterator);
       iterator = NULL;
@@ -322,6 +337,12 @@ install_packages(list_t *list, const char *dir, int verbose) {
 
 cleanup:
   if (iterator) list_iterator_destroy(iterator);
+  iterator = list_iterator_new(freelist, LIST_HEAD);
+  while ((node = list_iterator_next(iterator))) {
+    clib_package_t *pkg = node->val;
+    if (pkg) clib_package_free(pkg);
+  }
+  list_destroy(freelist);
   return rc;
 }
 
@@ -467,7 +488,9 @@ clib_package_new_from_slug_with_package_name(const char *slug, int verbose, cons
       clib_cache_save_json(author, name, version, json);
       log = "fetch";
   }
-  if (verbose) logger_info(log, "%s/%s:%s", author, name, file);
+  if (verbose) {
+    logger_info(log, "%s/%s:%s", author, name, file);
+  }
 
   free(json_url);
   json_url = NULL;
@@ -674,12 +697,15 @@ fetch_package_file_work(
   char *path = NULL;
   int rc = 0;
 
-#ifdef HAVE_PTHREADS
-  clib_package_lock_t *lock = pkg->lock;
-  pthread_mutex_lock(&lock->mutex);
-#endif
-
   _debug("fetch file: %s/%s", pkg->repo, file);
+
+  if (NULL == pkg) {
+    return 1;
+  }
+
+  if (NULL == pkg->url) {
+    return 1;
+  }
 
   if (!(url = clib_package_file_url(pkg->url, file))) {
     return 1;
@@ -692,17 +718,16 @@ fetch_package_file_work(
     goto cleanup;
   }
 
-  if (verbose) logger_info("fetch", "%s:%s", pkg->repo, file);
+  if (verbose) {
+    logger_info("fetch", "%s:%s", pkg->repo, file);
+    fflush(stdout);
+  }
 
 #ifdef HAVE_PTHREADS
-  pthread_mutex_unlock(&lock->mutex);
+  pthread_mutex_lock(&lock);
 #endif
 
   rc = http_get_file(url, path);
-
-#ifdef HAVE_PTHREADS
-  pthread_mutex_lock(&lock->mutex);
-#endif
 
   if (-1 == rc) {
     logger_error("error", "unable to fetch %s:%s", pkg->repo, file);
@@ -710,13 +735,16 @@ fetch_package_file_work(
     goto cleanup;
   }
 
-  if (verbose) logger_info("save", path);
-
-#ifdef HAVE_PTHREADS
-  pthread_mutex_unlock(&lock->mutex);
-#endif
+  if (verbose) {
+    logger_info("save", path);
+  }
 
 cleanup:
+
+#ifdef HAVE_PTHREADS
+  pthread_mutex_unlock(&lock);
+#endif
+
   free(url);
   free(path);
   return rc;
@@ -726,12 +754,15 @@ cleanup:
 static void *
 fetch_package_file_thread(void *arg) {
   fetch_package_file_thread_data_t *data = arg;
-  int rc = fetch_package_file_work(
+  int *rc = malloc(sizeof(*rc));
+  *rc = fetch_package_file_work(
       data->pkg
     , data->dir
     , data->file
     , data->verbose);
-  pthread_exit((void *) &rc);
+  (void) data->pkg->refs--;
+  pthread_exit((void *) rc);
+  free(data);
   return NULL;
 }
 #endif
@@ -776,6 +807,7 @@ fetch_package_file(
     return rc;
   }
 
+  (void) pkg->refs++;
   rc = pthread_create(
       &fetch->thread
     , NULL
@@ -816,15 +848,6 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   if (!pkg || !dir) goto cleanup;
   if (!(pkg_dir = path_join(dir, pkg->name))) goto cleanup;
 
-#ifdef HAVE_PTHREADS
-  clib_package_lock_t *lock = malloc(sizeof(clib_package_lock_t));
-  lock->pkg = pkg;
-  pkg->lock = lock;
-  pthread_mutex_init(lock, NULL);
-#else
-  pkg->lock = NULL;
-#endif
-
   _debug("mkdir -p %s", pkg_dir);
   // create directory for pkg
   if (-1 == mkdirp(pkg_dir, 0777)) goto cleanup;
@@ -857,7 +880,13 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
 #ifdef HAVE_PTHREADS
     if (0 != fetch) {
       fetch_package_file_thread_data_t *data = fetch;
-      pthread_join(data->thread, (void **) &rc);
+      int *status = 0;
+      pthread_join(data->thread, (void **) &status);
+      if (0 != status) {
+        rc = *status;
+        free(status);
+        status = 0;
+      }
       free(fetch);
     }
 #endif
@@ -885,15 +914,19 @@ download:
     list_node_t *source;
 
 #ifdef HAVE_PTHREADS
-    void **fetchs = malloc(pkg->src->len * sizeof(fetch_package_file_thread_data_t));
-    memset(fetchs, 0, pkg->src->len * sizeof(fetch_package_file_thread_data_t));
-    int max = 8;
+    fetch_package_file_thread_data_t **fetchs = 0;
+      fetchs = malloc(pkg->src->len * sizeof(fetch_package_file_thread_data_t));
+      memset(fetchs, 0, pkg->src->len * sizeof(fetch_package_file_thread_data_t));
+    int max = 16;
     int i = 0;
 #endif
 
     while ((source = list_iterator_next(iterator))) {
       void *fetch = NULL;
-      int rc = fetch_package_file(pkg, pkg_dir, source->val, verbose, &fetch);
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+      usleep(10000);
+#endif
+      rc = fetch_package_file(pkg, pkg_dir, source->val, verbose, &fetch);
       if (0 != rc) {
         list_iterator_destroy(iterator);
         iterator = NULL;
@@ -902,16 +935,29 @@ download:
       }
 
 #ifdef HAVE_PTHREADS
-      fetchs[i++] = fetch;
-      if (i == max) {
-        while (--i >= 0) {
-          fetch_package_file_thread_data_t *data = fetchs[i];
-          int rc = 0;
-          pthread_join(data->thread, (void **) &rc);
-          free(data);
+      if (pkg->src->len > 0) {
+        if (i < 0) {
+          i = 0;
         }
+        fetchs[i++] = fetch;
+        if (i == max || pkg->src->len < max) {
+          while (--i >= 0) {
+            fetch_package_file_thread_data_t *data = fetchs[i];
+            int *status = 0;
 
-        i = 0;
+            pthread_join(data->thread, (void **) rc);
+
+            fetchs[i] = 0;
+            data = 0 ;
+            i = 0;
+
+            if (0 != status) {
+              rc = *status;
+              free(status);
+              status = 0;
+            }
+          }
+        }
       }
 #endif
     }
@@ -926,11 +972,10 @@ cleanup:
   if (package_json) free(package_json);
   if (iterator) list_iterator_destroy(iterator);
 #ifdef HAVE_PTHREADS
-  pthread_mutex_destroy(&lock->mutex);
-  free(lock);
-  lock = NULL;
-  pkg->lock = NULL;
-  if (fetchs) free(fetchs);
+  if (0 != fetchs){
+    free(fetchs);
+  }
+  //pthread_mutex_destroy(&lock);
   fetchs = NULL;
 #endif
   return rc;
@@ -970,21 +1015,58 @@ clib_package_install_development(clib_package_t *pkg
 
 void
 clib_package_free(clib_package_t *pkg) {
+  if (NULL == pkg) {
+    return;
+  }
+
+  if (0 != pkg->refs) {
+    return;
+  }
+
   free(pkg->author);
+  pkg->author = 0;
+
   free(pkg->description);
+  pkg->description = 0;
+
   free(pkg->install);
+  pkg->install = 0;
+
   free(pkg->json);
+  pkg->json = 0;
+
   free(pkg->license);
+  pkg->license = 0;
+
   free(pkg->name);
+  pkg->name = 0;
+
   free(pkg->makefile);
+  pkg->makefile = 0;
+
   free(pkg->repo);
+  pkg->repo = 0;
+
   free(pkg->repo_name);
+  pkg->repo_name = 0;
+
   free(pkg->url);
+  pkg->url = 0;
+
   free(pkg->version);
+  pkg->version = 0;
+
   if (pkg->src) list_destroy(pkg->src);
+  pkg->src = 0;
+
   if (pkg->dependencies) list_destroy(pkg->dependencies);
+  pkg->dependencies = 0;
+
   if (pkg->development) list_destroy(pkg->development);
+  pkg->development = 0;
+
   free(pkg);
+  pkg = 0;
 }
 
 void
