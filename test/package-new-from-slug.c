@@ -4,6 +4,8 @@
 
 int
 main() {
+  curl_global_init(CURL_GLOBAL_ALL);
+
   describe("clib_package_new_from_slug") {
     it("should return NULL when given a bad slug") {
       assert(NULL == clib_package_new_from_slug(NULL, 0));

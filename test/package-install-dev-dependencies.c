@@ -6,6 +6,8 @@
 
 int
 main() {
+  curl_global_init(CURL_GLOBAL_ALL);
+
   describe("clib_package_install_development") {
     it("should return -1 when given a bad package") {
       assert(-1 == clib_package_install_development(NULL, "./deps", 0));

@@ -10,7 +10,7 @@ TEST_SRC = $(wildcard test/*.c)
 TEST_OBJ = $(TEST_SRC:.c=.o)
 TEST_BIN = $(TEST_SRC:.c=)
 
-CFLAGS = -std=c99 -Wall -Isrc -Ideps
+CFLAGS += -std=c99 -Wall -Isrc -Ideps -DHAVE_PTHREADS -pthread -g
 LDFLAGS = -lcurl
 VALGRIND_OPTS ?= --leak-check=full --error-exitcode=3
 

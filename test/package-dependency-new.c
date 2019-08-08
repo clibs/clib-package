@@ -4,6 +4,8 @@
 
 int
 main() {
+  curl_global_init(CURL_GLOBAL_ALL);
+
   describe("clib_package_dependency_new") {
     it("should return NULL when given bad input") {
       assert(NULL == clib_package_dependency_new("foo/bar", NULL));
@@ -34,6 +36,8 @@ main() {
       clib_package_dependency_free(dep);
     }
   }
+
+  curl_global_cleanup();
 
   return assert_failures();
 }
