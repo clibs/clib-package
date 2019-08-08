@@ -1008,6 +1008,10 @@ download:
         goto cleanup;
       }
 
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+      usleep(1024 * 10);
+#endif
+
 #ifdef HAVE_PTHREADS
       if (i < 0) {
         i = 0;
@@ -1038,12 +1042,12 @@ download:
             rc = -1;
             goto cleanup;
           }
-        }
-      }
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
-      usleep(100);
+          usleep(1024 * 10);
 #endif
+        }
+      }
 #endif
     }
 
