@@ -1216,6 +1216,8 @@ download:
 install:
   if (pkg->install) {
     rc = clib_package_install_executable(pkg, verbose);
+  } else {
+    rc = 0;
   }
 
   if (0 != rc) {
