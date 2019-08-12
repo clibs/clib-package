@@ -423,11 +423,15 @@ clib_package_new(const char *json, int verbose) {
 
   if (!json) goto cleanup;
   if (!(root = json_parse_string(json))) {
-    logger_error("error", "unable to parse json");
+    if (verbose) {
+      logger_error("error", "unable to parse json");
+    }
     goto cleanup;
   }
   if (!(json_object = json_value_get_object(root))) {
-    logger_error("error", "invalid clib.json or package.json file");
+    if (verbose) {
+      logger_error("error", "invalid clib.json or package.json file");
+    }
     goto cleanup;
   }
   if (!(pkg = malloc(sizeof(clib_package_t)))) goto cleanup;
@@ -830,16 +834,18 @@ fetch_package_file_work(
 
 
   if (-1 == rc) {
+    if (verbose) {
 #ifdef HAVE_PTHREADS
-  pthread_mutex_lock(&lock.mutex);
+      pthread_mutex_lock(&lock.mutex);
 #endif
-    logger_error("error", "unable to fetch %s:%s", pkg->repo, file);
-    fflush(stderr);
-    rc = 1;
+      logger_error("error", "unable to fetch %s:%s", pkg->repo, file);
+      fflush(stderr);
+      rc = 1;
 #ifdef HAVE_PTHREADS
-  pthread_mutex_unlock(&lock.mutex);
+      pthread_mutex_unlock(&lock.mutex);
 #endif
-    goto cleanup;
+      goto cleanup;
+    }
   }
 
   if (saved) {
@@ -960,21 +966,27 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
 
   tmp = gettempdir();
   if (NULL == tmp) {
-    logger_error("error", "gettempdir() out of memory");
+    if (verbose) {
+      logger_error("error", "gettempdir() out of memory");
+    }
     return -1;
   }
 
   if (!pkg->repo) {
-    logger_error("error", "repo field required to install executable");
+    if (verbose) {
+      logger_error("error", "repo field required to install executable");
+    }
     return -1;
   }
 
   reponame = strrchr(pkg->repo, '/');
   if (reponame && *reponame != '\0') reponame++;
   else {
-    logger_error(
-      "error",
-      "malformed repo field, must be in the form user/pkg");
+    if (verbose) {
+      logger_error(
+        "error",
+        "malformed repo field, must be in the form user/pkg");
+    }
     return -1;
   }
 
@@ -995,11 +1007,13 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
   rc = http_get_file_shared(url, tarball, clib_package_curl_share);
 
   if (0 != rc) {
-    logger_error("error"
-      , "download failed for '%s@%s' - HTTP GET '%s'"
-      , pkg->repo
-      , pkg->version
-      , url);
+    if (verbose) {
+      logger_error("error"
+        , "download failed for '%s@%s' - HTTP GET '%s'"
+        , pkg->repo
+        , pkg->version
+        , url);
+    }
 
     goto cleanup;
   }
@@ -1118,7 +1132,9 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   if (!(package_json = path_join(pkg_dir, pkg->filename))) goto cleanup;
   _debug("write: %s", package_json);
   if (-1 == fs_write(package_json, pkg->json)) {
-    logger_error("error", "Failed to write %s", package_json);
+    if (verbose) {
+      logger_error("error", "Failed to write %s", package_json);
+    }
     goto cleanup;
   }
 
@@ -1157,7 +1173,9 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
       goto download;
     }
 
-    logger_info("cache", pkg->repo);
+    if (verbose) {
+      logger_info("cache", pkg->repo);
+    }
     goto install;
   }
 
