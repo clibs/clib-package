@@ -452,7 +452,12 @@ clib_package_new(const char *json, int verbose) {
     // repo name may not be package name (thing.c -> thing)
     pkg->repo_name = parse_repo_name(pkg->repo);
   } else {
-    if (verbose) logger_warn("warning", "missing repo in clib.json or package.json file");
+    if (verbose) {
+      logger_warn(
+        "warning",
+        "missing repo in clib.json or package.json file for %s",
+        pkg->name);
+    }
     pkg->author = NULL;
     pkg->repo_name = NULL;
   }
@@ -553,7 +558,9 @@ download:
       json = res->data;
       _debug("status: %d", res->status);
       if (!res || !res->ok) {
-        logger_warn("warning", "unable to fetch %s/%s:%s", author, name, file);
+        if (verbose) {
+          logger_warn("warning", "unable to fetch %s/%s:%s", author, name, file);
+        }
         goto download;
       }
       log = "fetch";
@@ -571,6 +578,12 @@ download:
 
   // build package
   pkg = clib_package_new(json, verbose);
+
+  // cache json
+  if (pkg->author && pkg->name && pkg->version && json) {
+    clib_cache_save_json(pkg->author, pkg->name, pkg->version, json);
+  }
+
   if (res) {
     http_get_free(res);
   } else {
@@ -1028,10 +1041,16 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
     setenv("PREFIX", path, 1);
   }
 
+  const char *configure = pkg->configure;
+
+  if (0 == configure) {
+    configure = ":";
+  }
+
   char dir_path[PATH_MAX] = { 0 };
   realpath(dir, dir_path);
   E_FORMAT(&command
-      , "cp -fr %s/%s/%s %s && cd %s && %s"
+      , "cp -fr %s/%s/%s %s && cd %s && %s && %s"
       , dir_path
       , pkg->name
       , basename(pkg->makefile)
@@ -1311,38 +1330,20 @@ clib_package_free(clib_package_t *pkg) {
     return;
   }
 
-  free(pkg->author);
-  pkg->author = 0;
-
-  free(pkg->description);
-  pkg->description = 0;
-
-  free(pkg->install);
-  pkg->install = 0;
-
-  free(pkg->json);
-  pkg->json = 0;
-
-  free(pkg->license);
-  pkg->license = 0;
-
-  free(pkg->name);
-  pkg->name = 0;
-
-  free(pkg->makefile);
-  pkg->makefile = 0;
-
-  free(pkg->repo);
-  pkg->repo = 0;
-
-  free(pkg->repo_name);
-  pkg->repo_name = 0;
-
-  free(pkg->url);
-  pkg->url = 0;
-
-  free(pkg->version);
-  pkg->version = 0;
+#define FREE(k) if (pkg->k) { free(pkg->k); pkg->k = 0; }
+  FREE(author);
+  FREE(description);
+  FREE(install);
+  FREE(json);
+  FREE(license);
+  FREE(name);
+  FREE(makefile);
+  FREE(configure);
+  FREE(repo);
+  FREE(repo_name);
+  FREE(url);
+  FREE(version);
+#undef FREE
 
   if (pkg->src) list_destroy(pkg->src);
   pkg->src = 0;
