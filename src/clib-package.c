@@ -955,6 +955,14 @@ fetch_package_file(
 
 int
 clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
+#ifdef PATH_MAX
+  long path_max = PATH_MAX;
+#elif defined(_PC_PATH_MAX)
+  long path_max = pathconf(dir, _PC_PATH_MAX);
+#else
+  long path_max = 4096;
+#endif
+
   int rc;
   char *url = NULL;
   char *file = NULL;
@@ -964,10 +972,12 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
   char *deps = NULL;
   char *tmp = NULL;
   char *reponame = NULL;
+  char dir_path[path_max];
 
   _debug("install executable %s", pkg->repo);
 
   tmp = gettempdir();
+
   if (NULL == tmp) {
     if (verbose) {
       logger_error("error", "gettempdir() out of memory");
@@ -1051,8 +1061,10 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
   free(command);
   command = NULL;
 
+
   if (NULL != opts.prefix) {
-    char path[PATH_MAX] = { 0 };
+    char path[path_max];
+    memset(path, 0, path_max);
     realpath(opts.prefix, path);
     _debug("env: PREFIX: %s", path);
     setenv("PREFIX", path, 1);
@@ -1064,7 +1076,7 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
     configure = ":";
   }
 
-  char dir_path[PATH_MAX] = { 0 };
+  memset(dir_path, 0, path_max);
   realpath(dir, dir_path);
 
   if (pkg->makefile) {
