@@ -1003,6 +1003,22 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
     return -1;
   }
 
+  char *version = pkg->version;
+  if ('v' == version[0]) {
+    (void) version++;
+  }
+
+  E_FORMAT(&unpack_dir, "%s/%s-%s", tmp, reponame, version);
+
+  _debug("dir: %s", unpack_dir);
+
+  if (pkg->dependencies) {
+    E_FORMAT(&deps, "%s/deps", unpack_dir);
+    _debug("deps: %s", deps);
+    rc = clib_package_install_dependencies(pkg, deps, verbose);
+    if (-1 == rc) goto cleanup;
+  }
+
   E_FORMAT(&url
     , "https://github.com/%s/archive/%s.tar.gz"
     , pkg->repo
@@ -1042,25 +1058,8 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
   rc = system(command);
   if (0 != rc) goto cleanup;
 
-  char *version = pkg->version;
-  if ('v' == version[0]) {
-    (void) version++;
-  }
-
-  E_FORMAT(&unpack_dir, "%s/%s-%s", tmp, reponame, version);
-
-  _debug("dir: %s", unpack_dir);
-
-  if (pkg->dependencies) {
-    E_FORMAT(&deps, "%s/deps", unpack_dir);
-    _debug("deps: %s", deps);
-    rc = clib_package_install_dependencies(pkg, deps, verbose);
-    if (-1 == rc) goto cleanup;
-  }
-
   free(command);
   command = NULL;
-
 
   if (NULL != opts.prefix) {
     char path[path_max];
@@ -1206,6 +1205,10 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
     pthread_mutex_unlock(&lock.mutex);
 #endif
   }
+
+  rc = clib_package_install_dependencies(pkg, dir, verbose);
+
+  if (-1 == rc) goto cleanup;
 
   // fetch makefile
   if (pkg->makefile) {
@@ -1354,8 +1357,6 @@ install:
   if (0 != rc) {
     goto cleanup;
   }
-
-  rc = clib_package_install_dependencies(pkg, dir, verbose);
 
 cleanup:
   if (pkg_dir) free(pkg_dir);
