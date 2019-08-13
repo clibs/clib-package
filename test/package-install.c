@@ -8,6 +8,11 @@
 int
 main() {
   curl_global_init(CURL_GLOBAL_ALL);
+  clib_package_set_opts((clib_package_opts_t) {
+    .skip_cache = 0,
+    .prefix = 0,
+    .force = 1,
+  });
 
   describe("clib_package_install") {
     it("should return -1 when given a bad package") {
@@ -27,7 +32,7 @@ main() {
     it("should install the package's clib.json or package.json") {
       clib_package_t *pkg = clib_package_new_from_slug("stephenmathieson/case.c@0.1.0", 0);
       assert(pkg);
-      assert(0 == clib_package_install(pkg, "./test/fixtures/", 0));
+      assert(0 == clib_package_install(pkg, "./test/fixtures/", 1));
       assert(
         0 == fs_exists("./test/fixtures/case/package.json") ||
         0 == fs_exists("./test/fixtures/case/clib.json"));
@@ -148,6 +153,7 @@ main() {
   }
 
   curl_global_cleanup();
+  clib_package_cleanup();
 
   return assert_failures();
 }

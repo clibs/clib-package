@@ -7,6 +7,11 @@
 int
 main() {
   curl_global_init(CURL_GLOBAL_ALL);
+  clib_package_set_opts((clib_package_opts_t) {
+    .skip_cache = 0,
+    .prefix = 0,
+    .force = 1,
+  });
 
   describe("clib_package_install_dependencies") {
     it("should return -1 when given a bad package") {
@@ -89,6 +94,9 @@ main() {
       rimraf("./test/fixtures");
     }
   }
+
+  curl_global_cleanup();
+  clib_package_cleanup();
 
   return assert_failures();
 }
