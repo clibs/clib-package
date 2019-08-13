@@ -98,4 +98,7 @@ clib_package_free(clib_package_t *);
 void
 clib_package_dependency_free(void *);
 
+void
+clib_package_cleanup();
+
 #endif
