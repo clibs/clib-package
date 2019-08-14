@@ -94,6 +94,7 @@ static const char *manifest_names[] = {
 static clib_package_opts_t opts = {
    .skip_cache = 1,
    .prefix = 0,
+   .global = 0,
    .force = 0,
 };
 
@@ -129,6 +130,12 @@ clib_package_set_opts(clib_package_opts_t o) {
     opts.skip_cache = 0;
   } else if (0 == opts.skip_cache && 1 == o.skip_cache) {
     opts.skip_cache = 1;
+  }
+
+  if (1 == opts.global && 0 == o.global) {
+    opts.global = 0;
+  } else if (0 == opts.global && 1 == o.global) {
+    opts.global = 1;
   }
 
   if (1 == opts.force && 0 == o.force) {
@@ -565,9 +572,6 @@ download:
       json = res->data;
       _debug("status: %d", res->status);
       if (!res || !res->ok) {
-        if (verbose) {
-          logger_warn("warning", "unable to fetch %s/%s:%s", author, name, file);
-        }
         goto download;
       }
       log = "fetch";
@@ -645,6 +649,12 @@ download:
   return pkg;
 
 error:
+  if (0 == retries) {
+    if (verbose && author && name && file) {
+      logger_warn("warning", "unable to fetch %s/%s:%s", author, name, file);
+    }
+  }
+
   free(author);
   free(name);
   free(version);
@@ -1278,7 +1288,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
   }
 
   // if no sources are listed, just install
-  if (NULL == pkg->src) goto install;
+  if (opts.global || NULL == pkg->src) goto install;
 
   if (clib_cache_has_package(pkg->author, pkg->name, pkg->version)) {
     if (opts.skip_cache) {
