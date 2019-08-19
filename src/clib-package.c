@@ -499,11 +499,14 @@ clib_package_new(const char *json, int verbose) {
     }
   }
 
-  if (!pkg->repo) {
+  if (!pkg->repo && pkg->author && pkg->name) {
     asprintf(&pkg->repo, "%s/%s", pkg->author, pkg->name);
+    _debug("creating package: %s", pkg->repo);
   }
 
-  _debug("creating package: %s", pkg->repo);
+  if (!pkg->author) {
+    _debug("unable to determine package author for: %s", pkg->name);
+  }
 
   // TODO npm-style "repository" (thlorenz/gumbo-parser.c#1)
   if (pkg->repo) {
@@ -669,10 +672,6 @@ download:
       free(author);
     }
   } else {
-    pkg->author = author;
-  }
-
-  if (!pkg->author && author) {
     pkg->author = strdup(author);
   }
 
@@ -693,6 +692,7 @@ download:
   }
 
   pkg->url = url;
+
 
   // cache json
   if (pkg && pkg->author && pkg->name && pkg->version) {
