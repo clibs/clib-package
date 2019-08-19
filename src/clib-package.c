@@ -457,6 +457,37 @@ clib_package_new(const char *json, int verbose) {
   pkg->configure = json_object_get_string_safe(json_object, "configure");
   pkg->install = json_object_get_string_safe(json_object, "install");
   pkg->makefile = json_object_get_string_safe(json_object, "makefile");
+  pkg->flags = json_object_get_string_safe(json_object, "flags");
+
+  if (!pkg->flags) {
+    pkg->flags = json_object_get_string_safe(json_object, "cflags");
+  }
+
+  // try as array
+  if (!pkg->flags) {
+    JSON_Array *flags = json_object_get_array(json_object, "flags");
+
+    if (!flags) {
+      flags = json_object_get_array(json_object, "cflags");
+    }
+
+    if (flags) {
+      for (unsigned int i = 0; i < json_array_get_count(flags); i++) {
+        char *flag = json_array_get_string_safe(flags, i);
+        if (flag) {
+          if (!pkg->flags) {
+            pkg->flags = "";
+          }
+
+          if (-1 == asprintf(&pkg->flags, "%s %s", pkg->flags, flag)){
+            goto cleanup;
+          }
+
+          free(flag);
+        }
+      }
+    }
+  }
 
   _debug("creating package: %s", pkg->repo);
 
@@ -1111,6 +1142,23 @@ clib_package_install_executable(clib_package_t *pkg , char *dir, int verbose) {
     free(command);
   }
 
+  if (pkg->flags) {
+    char *flags = NULL;
+#ifdef _GNU_SOURCE
+    char *cflags = secure_getenv("CFLAGS");
+#else
+    char *cflags = getenv("CFLAGS");
+#endif
+
+    if (cflags) {
+      asprintf(&flags, "%s %s", cflags, pkg->flags);
+    } else {
+      asprintf(&flags, "%s", pkg->flags);
+    }
+
+    setenv("CFLAGS", cflags, 1);
+  }
+
   E_FORMAT(&command, "cd %s && %s"
       , unpack_dir
       , pkg->install);
@@ -1491,6 +1539,7 @@ clib_package_free(clib_package_t *pkg) {
   FREE(repo_name);
   FREE(url);
   FREE(version);
+  FREE(flags);
 #undef FREE
 
   if (pkg->src) list_destroy(pkg->src);
