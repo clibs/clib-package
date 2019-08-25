@@ -1387,7 +1387,6 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
           logger_warn("warning", "unable to fetch Makefile (%s) for '%s'", pkg->makefile, pkg->name);
         }
       }
-
     }
 #endif
   }
