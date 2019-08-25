@@ -959,13 +959,15 @@ cleanup:
 static void *
 fetch_package_file_thread(void *arg) {
   fetch_package_file_thread_data_t *data = arg;
+  int *status = malloc(sizeof(int));
   int rc = fetch_package_file_work(
       data->pkg
     , data->dir
     , data->file
     , data->verbose);
+  *status = rc;
   (void) data->pkg->refs--;
-  pthread_exit((void *) rc);
+  pthread_exit((void *) status);
   return (void *) rc;
 }
 #endif
@@ -1378,8 +1380,14 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
       pthread_join(data->thread, (void **) &status);
       if (0 != status) {
         rc = *status;
+        free(status);
         status = 0;
+        if (0 != rc) {
+          rc = 0;
+          logger_warn("warning", "unabel to fetch Makefile (%s) for '%s'", pkg->makefile, pkg->name);
+        }
       }
+
     }
 #endif
   }
@@ -1445,6 +1453,7 @@ download:
 
         if (0 != status) {
           rc = *status;
+          free(status);
           status = 0;
         }
 
@@ -1474,6 +1483,7 @@ download:
 
     if (0 != status) {
       rc = *status;
+      free(status);
       status = 0;
     }
 
