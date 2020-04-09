@@ -47,6 +47,11 @@
 
 #define GITHUB_CONTENT_URL "https://raw.githubusercontent.com/"
 
+#if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
+#define setenv(k, v, _) _putenv_s(k, v)
+#define realpath(a, b) _fullpath(a, b, strlen(a))
+#endif
+
 static hash_t *visited_packages = 0;
 
 #ifdef HAVE_PTHREADS
