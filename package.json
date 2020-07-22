@@ -1,6 +1,6 @@
 {
   "name": "clib-package",
-  "version": "next",
+  "version": "0.0.0",
   "scripts": {
     "version": "./scripts/update-clib-json && git add clib.json",
     "test": "make test"
