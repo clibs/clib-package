@@ -167,7 +167,7 @@ clib_package_set_opts(clib_package_opts_t o) {
   }
 
   if (opts.concurrency < 0) {
-    opts.concurrency= 0;
+    opts.concurrency = 0;
   }
 }
 
@@ -1323,7 +1323,7 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
 #endif
   }
 
-  if (0 == opts.force && pkg && pkg->name){
+  if (0 == opts.force && pkg && pkg->name) {
 #ifdef HAVE_PTHREADS
     pthread_mutex_lock(&lock.mutex);
 #endif
@@ -1472,6 +1472,10 @@ clib_package_install(clib_package_t *pkg, const char *dir, int verbose) {
 
     goto install;
   }
+
+#ifdef HAVE_PTHREADS
+    pthread_mutex_unlock(&lock.mutex);
+#endif
 
 download:
 

@@ -9,6 +9,7 @@ int
 main() {
   curl_global_init(CURL_GLOBAL_ALL);
   clib_package_set_opts((clib_package_opts_t) {
+    .skip_cache = 1,
     .prefix = 0,
     .force = 1,
   });
