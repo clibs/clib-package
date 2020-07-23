@@ -647,6 +647,9 @@ clib_package_new_from_slug_with_package_name(const char *slug, int verbose, cons
     }
 
     log = "cache";
+#ifdef HAVE_PTHREADS
+    pthread_mutex_unlock(&lock.mutex);
+#endif
   } else {
 download:
 #ifdef HAVE_PTHREADS
