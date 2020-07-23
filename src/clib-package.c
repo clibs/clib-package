@@ -46,6 +46,7 @@
 #endif
 
 #define GITHUB_CONTENT_URL "https://raw.githubusercontent.com/"
+#define GITHUB_CONTENT_URL_WITH_TOKEN "https://%s@raw.githubusercontent.com/"
 
 #if defined(_WIN32) || defined(WIN32) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
 #define setenv(k, v, _) _putenv_s(k, v)
@@ -104,6 +105,7 @@ static clib_package_opts_t opts = {
   .prefix = 0,
   .global = 0,
   .force = 0,
+  .token = 0,
 };
 
 /**
@@ -157,6 +159,14 @@ clib_package_set_opts(clib_package_opts_t o) {
       opts.prefix = 0;
     } else {
       opts.prefix = o.prefix;
+    }
+  }
+
+  if (0 != o.token) {
+    if (0 == strlen(o.token)) {
+      opts.token = 0;
+    } else {
+      opts.token = o.token;
     }
   }
 
@@ -430,6 +440,7 @@ init_curl_share() {
     curl_share_setopt(clib_package_curl_share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
     curl_share_setopt(clib_package_curl_share, CURLSHOPT_LOCKFUNC, curl_lock_callback);
     curl_share_setopt(clib_package_curl_share, CURLSHOPT_UNLOCKFUNC, curl_unlock_callback);
+    curl_share_setopt(clib_package_curl_share, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
     pthread_mutex_unlock(&lock.mutex);
   }
 }
@@ -801,8 +812,7 @@ clib_package_new_from_slug(const char *slug, int verbose) {
 char *
 clib_package_url(const char *author, const char *name, const char *version) {
   if (!author || !name || !version) return NULL;
-  int size =
-      strlen(GITHUB_CONTENT_URL)
+  int size = strlen(GITHUB_CONTENT_URL)
     + strlen(author)
     + 1 // /
     + strlen(name)
@@ -811,36 +821,63 @@ clib_package_url(const char *author, const char *name, const char *version) {
     + 1 // \0
     ;
 
+  if (0 != opts.token) {
+    size += strlen(opts.token);
+    size += 1; // @
+  }
+
   char *slug = malloc(size);
   if (slug) {
     memset(slug, '\0', size);
-    sprintf(slug
-      , GITHUB_CONTENT_URL "%s/%s/%s"
-      , author
-      , name
-      , version);
+    if (0 != opts.token) {
+      sprintf(slug
+          , GITHUB_CONTENT_URL_WITH_TOKEN "%s/%s/%s"
+          , opts.token
+          , author
+          , name
+          , version);
+    } else {
+      sprintf(slug
+          , GITHUB_CONTENT_URL "%s/%s/%s"
+          , author
+          , name
+          , version);
+    }
   }
+
   return slug;
 }
 
 char *
 clib_package_url_from_repo(const char *repo, const char *version) {
   if (!repo || !version) return NULL;
-  int size =
-      strlen(GITHUB_CONTENT_URL)
+  int size = strlen(GITHUB_CONTENT_URL)
     + strlen(repo)
     + 1 // /
     + strlen(version)
     + 1 // \0
     ;
 
+  if (0 != opts.token) {
+    size += strlen(opts.token);
+    size += 1; // @
+  }
+
   char *slug = malloc(size);
   if (slug) {
     memset(slug, '\0', size);
-    sprintf(slug
-      , GITHUB_CONTENT_URL "%s/%s"
-      , repo
-      , version);
+    if (0 != opts.token) {
+      sprintf(slug
+          , GITHUB_CONTENT_URL_WITH_TOKEN "%s/%s"
+          , opts.token
+          , repo
+          , version);
+    } else {
+      sprintf(slug
+          , GITHUB_CONTENT_URL "%s/%s"
+          , repo
+          , version);
+    }
   }
   return slug;
 }
