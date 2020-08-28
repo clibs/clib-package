@@ -1,3 +1,6 @@
+# This repository has been merged into [clibs/clib](https://github.com/clibs/clib), and it is not used anymore.
+
+----
 
 # clib-package
 
